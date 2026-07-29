@@ -4,45 +4,62 @@ import njalaLogo from '../../assets/Njala University.jpg'
 export default function SignIn() {
   return (
     <main className="min-h-screen flex flex-col md:flex-row bg-[#fbf9f8] text-[#1b1c1c]">
-      {/* Left — Brand panel */}
-      <section className="w-full md:w-1/2 lg:w-5/12 brand-gradient flex flex-col justify-between p-5 sm:p-8 md:p-10 lg:p-12 relative overflow-hidden shrink-0">
+      {/* Mobile Top Header Banner (Sleek, Compact Header for Mobile Viewports) */}
+      <header className="md:hidden brand-gradient px-4 py-3 flex items-center justify-between shadow-md shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg p-0.5 bg-white/10 border border-white/20 backdrop-blur-md shrink-0 flex items-center justify-center">
+            <img src={njalaLogo} alt="Njala Logo" className="w-full h-full object-cover rounded-xs" />
+          </div>
+          <div>
+            <h1 className="text-base font-bold leading-none text-white tracking-wide">NELMS</h1>
+            <p className="text-[9px] text-[#a0f3d4] font-semibold uppercase tracking-widest mt-0.5">Academic Portal</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-white/90 bg-white/10 px-2.5 py-1 rounded-full border border-white/15 backdrop-blur-md">
+          <span className="w-2 h-2 rounded-full bg-[#a0f3d4] animate-pulse" />
+          Njala University
+        </div>
+      </header>
+
+      {/* Desktop Left Brand Panel (Hidden on Mobile for optimal UX) */}
+      <section className="hidden md:flex md:w-1/2 lg:w-5/12 brand-gradient flex-col justify-between p-8 md:p-10 lg:p-12 relative overflow-hidden shrink-0">
         {/* Top — Logo & Portal Badge */}
         <div className="relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl p-1 bg-white/10 border border-white/20 backdrop-blur-md shadow-inner shrink-0 flex items-center justify-center">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-xl p-1 bg-white/10 border border-white/20 backdrop-blur-md shadow-inner shrink-0 flex items-center justify-center">
               <img src={njalaLogo} alt="Njala University Logo" className="w-full h-full object-cover rounded-lg" />
             </div>
             <div>
-              <h1 className="text-lg sm:text-[22px] font-bold leading-tight text-white tracking-wide">NELMS</h1>
-              <p className="text-[10px] sm:text-[11px] text-[#a0f3d4] font-semibold uppercase tracking-widest">Academic Portal</p>
+              <h1 className="text-[22px] font-bold leading-tight text-white tracking-wide">NELMS</h1>
+              <p className="text-[11px] text-[#a0f3d4] font-semibold uppercase tracking-widest">Academic Portal</p>
             </div>
           </div>
         </div>
 
         {/* Center — Headline & Intro */}
-        <div className="relative z-10 max-w-lg my-6 sm:my-8 md:my-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 backdrop-blur-md text-[11px] sm:text-[12px] font-medium text-white/90 mb-3 sm:mb-4">
+        <div className="relative z-10 max-w-lg my-auto">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 backdrop-blur-md text-[12px] font-medium text-white/90 mb-4">
             <span className="w-2 h-2 rounded-full bg-[#a0f3d4] animate-pulse" />
             Centralized E-Learning Platform
           </div>
-          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-[36px] font-bold leading-tight text-white mb-2 sm:mb-4">
+          <h2 className="text-3xl lg:text-[36px] font-bold leading-tight text-white mb-4">
             Empowering Academic Excellence.
           </h2>
-          <p className="text-xs sm:text-sm md:text-base leading-relaxed text-white/80 hidden sm:block">
+          <p className="text-sm md:text-base leading-relaxed text-white/80">
             Access your courses, assignments, grades, and resources in one centralized portal designed for the modern scholar.
           </p>
         </div>
 
         {/* Bottom — System Authority Badges */}
-        <div className="relative z-10 pt-4 sm:pt-6 border-t border-white/15 flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm">
+        <div className="relative z-10 pt-6 border-t border-white/15 flex items-center justify-between gap-4 text-sm">
           <div className="flex flex-col">
-            <span className="text-[10px] sm:text-[11px] font-semibold tracking-wider text-white/50 uppercase">Institution</span>
+            <span className="text-[11px] font-semibold tracking-wider text-white/50 uppercase">Institution</span>
             <span className="font-semibold text-white mt-0.5">Njala University</span>
           </div>
-          <div className="w-px h-6 sm:h-8 bg-white/20 hidden sm:block" />
+          <div className="w-px h-8 bg-white/20" />
           <div className="flex flex-col">
-            <span className="text-[10px] sm:text-[11px] font-semibold tracking-wider text-white/50 uppercase">System Status</span>
-            <span className="font-semibold text-white mt-0.5 flex items-center gap-1.5">
+            <span className="text-[11px] font-semibold tracking-wider text-white/50 uppercase">System Status</span>
+            <span className="font-semibold text-white mt-0.5 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#a0f3d4] shadow-[0_0_8px_#a0f3d4]" />
               Online & Secure
             </span>
@@ -50,12 +67,12 @@ export default function SignIn() {
         </div>
 
         {/* Background ambient lighting effects */}
-        <div className="absolute -bottom-24 -right-24 w-72 sm:w-96 h-72 sm:h-96 bg-[#086b53]/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-1/4 -left-12 w-64 sm:w-80 h-64 sm:h-80 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-[#086b53]/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/4 -left-12 w-80 h-80 bg-white/5 rounded-full blur-3xl pointer-events-none" />
       </section>
 
-      {/* Right — Clerk sign-in section */}
-      <section className="w-full md:w-1/2 lg:w-7/12 flex items-center justify-center p-4 sm:p-8 md:p-12 my-auto">
+      {/* Main Sign-In Section */}
+      <section className="w-full md:w-1/2 lg:w-7/12 flex-1 flex items-center justify-center p-4 sm:p-6 md:p-12 my-auto">
         <div className="w-full max-w-md">
           {/* Header */}
           <div className="mb-4 sm:mb-6 text-center sm:text-left">
@@ -86,7 +103,7 @@ export default function SignIn() {
           />
 
           {/* IT Support Footer */}
-          <div className="mt-5 sm:mt-6 pt-4 sm:pt-6 border-t border-[#c4c6d0] text-center">
+          <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-[#c4c6d0] text-center">
             <p className="text-xs sm:text-sm text-[#44474f]">
               Trouble signing in?{' '}
               <a href="mailto:kmorie18c@njala.edu.sl" className="text-[#03224d] font-bold hover:underline">
