@@ -27,17 +27,25 @@ export default function Grades() {
   const [loading, setLoading] = useState(true)
   const [selectedCourse, setSelectedCourse] = useState('')
   const [courses, setCourses] = useState([])
+  const [transcriptData, setTranscriptData] = useState(null)
+  const [downloading, setDownloading] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     Promise.all([
       api.get('/submissions/me'),
       api.get('/courses?enrolled=true'),
+      api.get('/submissions/transcript'),
     ])
-      .then(([s, c]) => {
+      .then(([s, c, t]) => {
         setSubmissions(s.data?.submissions ?? [])
         setCourses(c.data?.courses ?? [])
+        setTranscriptData(t.data ?? null)
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.error('Failed to load grades data:', err)
+        setError('Failed to load academic records.')
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -52,53 +60,39 @@ export default function Grades() {
   }, 0)
   const avgScore = graded.length ? Math.round((totalPercentage / graded.length) * 10) / 10 : null
 
-  // Calculate Cumulative GPA (CGPA) on 5.0 scale
-  const totalGP = graded.reduce((sum, s) => {
-    const g = calculateGrade(s.score, s.maxScore)
-    return sum + g.gradePoint
-  }, 0)
-  const cgpa = graded.length ? (totalGP / graded.length).toFixed(2) : '0.00'
+  // CGPA from backend transcript or local calculation fallback
+  const cgpa = transcriptData?.summary?.cgpa !== undefined
+    ? Number(transcriptData.summary.cgpa).toFixed(2)
+    : (graded.length
+        ? (graded.reduce((sum, s) => sum + calculateGrade(s.score, s.maxScore).gradePoint, 0) / graded.length).toFixed(2)
+        : '0.00')
 
-  function handleExportTranscript() {
-    if (!filtered || filtered.length === 0) return
-    const headers = [
-      'Assignment',
-      'Course Code',
-      'Course Title',
-      'Submitted Date',
-      'Score',
-      'Max Score',
-      'Percentage',
-      'Letter Grade',
-      'Grade Point',
-      'Classification',
-      'Feedback',
-    ]
-    const rows = filtered.map((s) => {
-      const g = calculateGrade(s.score, s.maxScore)
-      return [
-        `"${s.assignmentTitle || ''}"`,
-        `"${s.courseCode || ''}"`,
-        `"${s.courseTitle || ''}"`,
-        `"${new Date(s.submittedAt).toLocaleDateString()}"`,
-        s.score !== null && s.score !== undefined ? s.score : '',
-        s.maxScore || '',
-        s.score !== null && s.score !== undefined ? `${g.percentage}%` : '',
-        g.letterGrade,
-        g.gradePoint,
-        g.classification,
-        `"${(s.feedback || '').replace(/"/g, '""')}"`,
-      ].join(',')
-    })
+  const academicStanding = transcriptData?.summary?.academicStanding || 'Good Standing'
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows].join('\n')
-    const encodedUri = encodeURI(csvContent)
-    const link = document.createElement('a')
-    link.setAttribute('href', encodedUri)
-    link.setAttribute('download', `Academic_Transcript_${new Date().toISOString().slice(0, 10)}.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+  async function handleExportTranscript() {
+    setDownloading(true)
+    setError('')
+    try {
+      const response = await api.get('/submissions/transcript?format=csv', {
+        responseType: 'blob',
+      })
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      const dateStr = new Date().toISOString().slice(0, 10)
+      const studentName = (transcriptData?.student?.fullName || 'Student').replace(/[^a-zA-Z0-9]/g, '_')
+      link.setAttribute('download', `Njala_Official_Transcript_${studentName}_${dateStr}.csv`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Failed to export official transcript:', err)
+      setError('Failed to generate official transcript download.')
+    } finally {
+      setDownloading(false)
+    }
   }
 
   return (
@@ -114,23 +108,37 @@ export default function Grades() {
         <div className="w-full sm:w-auto">
           <button
             onClick={handleExportTranscript}
-            disabled={filtered.length === 0}
+            disabled={downloading || graded.length === 0}
             className="w-full sm:w-auto justify-center flex items-center gap-2 px-4 py-2.5 sm:py-2 border border-[#03224d] text-[#03224d] rounded-lg text-[12px] font-bold hover:bg-[#03224d] hover:text-white transition-all disabled:opacity-50 shadow-xs cursor-pointer"
           >
-            <span className="material-symbols-outlined text-sm">download</span>
-            Export Transcript
+            <span className={`material-symbols-outlined text-sm ${downloading ? 'animate-spin' : ''}`}>
+              {downloading ? 'progress_activity' : 'download'}
+            </span>
+            {downloading ? 'Generating CSV…' : 'Export Official Transcript'}
           </button>
         </div>
       </div>
+
+      {error && (
+        <div className="mb-6 p-3.5 bg-[#ffdad6] border border-[#ba1a1a] text-[#ba1a1a] rounded-lg text-sm flex items-center gap-2">
+          <span className="material-symbols-outlined text-[18px]">error</span>
+          <span>{error}</span>
+        </div>
+      )}
 
       {/* Stats row */}
       <div className="grid grid-cols-12 gap-4 sm:gap-6 mb-6">
         {/* GPA card */}
         <div className="col-span-12 lg:col-span-4 bg-white border border-[#c4c6d0] p-5 sm:p-6 rounded-xl relative overflow-hidden shadow-xs">
           <div className="relative z-10">
-            <p className="text-[11px] sm:text-[12px] font-bold text-[#44474f] uppercase tracking-widest mb-2 sm:mb-3">
-              Cumulative GPA (5.0 Scale)
-            </p>
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <p className="text-[11px] sm:text-[12px] font-bold text-[#44474f] uppercase tracking-widest">
+                Cumulative GPA (5.0 Scale)
+              </p>
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-[#086b53]/10 text-[#086b53] px-2 py-0.5 rounded">
+                {academicStanding}
+              </span>
+            </div>
             <div className="flex items-baseline gap-2 mb-2">
               <span className="text-4xl sm:text-[52px] font-bold text-[#03224d] leading-none">{cgpa}</span>
               <span className="text-[14px] sm:text-[16px] text-[#44474f] font-semibold">/ 5.0</span>
@@ -155,8 +163,8 @@ export default function Grades() {
         {/* Stat cards */}
         <div className="col-span-12 lg:col-span-8 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
           {[
-            { icon: 'check_circle', color: 'text-[#086b53]', label: 'Graded', value: graded.length },
-            { icon: 'pending', color: 'text-[#dd9235]', label: 'Pending', value: submissions.length - graded.length },
+            { icon: 'check_circle', color: 'text-[#086b53]', label: 'Graded Tasks', value: graded.length },
+            { icon: 'pending', color: 'text-[#dd9235]', label: 'Pending Evaluation', value: submissions.length - graded.length },
             { icon: 'school', color: 'text-[#03224d]', label: 'Enrolled Courses', value: courses.length },
           ].map((s) => (
             <div key={s.label} className="bg-white border border-[#c4c6d0] p-4 sm:p-5 rounded-xl flex flex-row sm:flex-col items-center sm:items-start justify-between shadow-xs">

@@ -7,6 +7,7 @@ import Course from '../models/Course.js'
 import Notification from '../models/Notification.js'
 import User from '../models/User.js'
 import { logAudit } from '../utils/auditLogger.js'
+import { calculateGrade } from '../utils/grading.js'
 
 const router = Router()
 const auth = [requireAuth, populateUser]
@@ -28,6 +29,109 @@ router.get('/me', ...auth, async (req, res, next) => {
     }))
     res.json({ submissions: enriched })
   } catch (err) { next(err) }
+})
+
+/** GET /api/v1/submissions/transcript */
+router.get('/transcript', ...auth, async (req, res, next) => {
+  try {
+    const student = await User.findById(req.dbUser._id)
+      .populate('schoolId', 'name code')
+      .populate('departmentId', 'name code')
+      .lean()
+
+    if (!student) return res.status(404).json({ error: 'Student profile not found' })
+
+    const subs = await Submission.find({ studentId: req.dbUser._id })
+      .populate({
+        path: 'assignmentId',
+        select: 'title maxScore courseId dueDate',
+        populate: { path: 'courseId', select: 'code title' },
+      })
+      .sort({ submittedAt: -1 })
+      .lean()
+
+    const graded = subs.filter((s) => s.score !== null && s.score !== undefined)
+
+    let totalGP = 0
+    let totalPercentage = 0
+
+    const records = graded.map((s) => {
+      const g = calculateGrade(s.score, s.assignmentId?.maxScore)
+      totalGP += g.gradePoint
+      totalPercentage += g.percentage
+      return {
+        submissionId: s._id.toString(),
+        assignmentTitle: s.assignmentId?.title || 'Assignment',
+        courseCode: s.assignmentId?.courseId?.code || 'N/A',
+        courseTitle: s.assignmentId?.courseId?.title || 'N/A',
+        submittedAt: s.submittedAt,
+        gradedAt: s.gradedAt,
+        score: s.score,
+        maxScore: s.assignmentId?.maxScore,
+        percentage: g.percentage,
+        letterGrade: g.letterGrade,
+        gradePoint: g.gradePoint,
+        classification: g.classification,
+        feedback: s.feedback || '',
+      }
+    })
+
+    const totalGraded = records.length
+    const cgpa = totalGraded > 0 ? Number((totalGP / totalGraded).toFixed(2)) : 0.0
+    const avgPercentage = totalGraded > 0 ? Number((totalPercentage / totalGraded).toFixed(1)) : 0.0
+
+    let academicStanding = 'Good Standing'
+    if (cgpa >= 4.5) academicStanding = 'First Class Honours'
+    else if (cgpa >= 3.6) academicStanding = 'Second Class Upper Division'
+    else if (cgpa >= 2.8) academicStanding = 'Second Class Lower Division'
+    else if (cgpa >= 2.0) academicStanding = 'Third Class Honours'
+    else if (cgpa >= 1.5) academicStanding = 'Pass Degree'
+    else if (totalGraded > 0) academicStanding = 'Academic Probation'
+
+    if (req.query.format === 'csv') {
+      const filename = `Njala_Transcript_${(student.fullName || 'Student').replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+
+      let csv = `NJALA UNIVERSITY OFFICIAL ACADEMIC TRANSCRIPT (5.0 SCALE)\n`
+      csv += `Student Name,${student.fullName || ''}\n`
+      csv += `Student ID,${student.idNumber || 'N/A'}\n`
+      csv += `Email,${student.email || ''}\n`
+      csv += `School,${student.schoolId?.name || 'Unassigned'}\n`
+      csv += `Department,${student.departmentId?.name || 'Unassigned'}\n`
+      csv += `Cumulative GPA (CGPA),${cgpa} / 5.0\n`
+      csv += `Academic Standing,${academicStanding}\n`
+      csv += `Date Generated,${new Date().toLocaleDateString()}\n\n`
+
+      csv += `Assignment,Course Code,Course Title,Date Submitted,Score,Max Score,Percentage,Letter Grade,Grade Point,Classification,Feedback\n`
+
+      records.forEach((r) => {
+        csv += `"${r.assignmentTitle}","${r.courseCode}","${r.courseTitle}","${new Date(r.submittedAt).toLocaleDateString()}",${r.score},${r.maxScore},${r.percentage}%,${r.letterGrade},${r.gradePoint},"${r.classification}","${(r.feedback || '').replace(/"/g, '""')}"\n`
+      })
+
+      return res.status(200).send(csv)
+    }
+
+    res.json({
+      student: {
+        fullName: student.fullName,
+        email: student.email,
+        idNumber: student.idNumber,
+        schoolName: student.schoolId?.name,
+        departmentName: student.departmentId?.name,
+      },
+      summary: {
+        totalGraded,
+        avgPercentage,
+        cgpa,
+        scale: '5.0',
+        academicStanding,
+      },
+      records,
+    })
+  } catch (err) {
+    next(err)
+  }
 })
 
 /** GET /api/v1/submissions/recent  [lecturer/dept_head/admin] */
