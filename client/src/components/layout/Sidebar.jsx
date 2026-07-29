@@ -34,6 +34,13 @@ const NAV = {
   ],
 }
 
+const ROLE_LABELS = {
+  student: 'Student Portal',
+  lecturer: 'Lecturer Portal',
+  dept_head: 'Dept Head Portal',
+  admin: 'Admin Console',
+}
+
 export default function Sidebar({ role, mobileOpen, onClose }) {
   const location = useLocation()
   const { signOut } = useClerk()
@@ -54,44 +61,45 @@ export default function Sidebar({ role, mobileOpen, onClose }) {
   return (
     <>
       {/* Mobile Overlay Backdrop */}
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 bg-[#03224d]/50 z-40 lg:hidden backdrop-blur-xs transition-opacity"
-          onClick={onClose}
-          aria-hidden="true"
-        />
-      )}
+      <div
+        className={clsx(
+          'fixed inset-0 bg-[#03224d]/60 z-40 lg:hidden backdrop-blur-xs transition-opacity duration-300',
+          mobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        )}
+        onClick={onClose}
+        aria-hidden="true"
+      />
 
       {/* Sidebar Drawer */}
       <aside
         className={clsx(
-          'fixed left-0 top-0 h-screen w-[280px] bg-[#fbf9f8] border-r border-[#c4c6d0] flex flex-col py-6 z-50 transition-transform duration-300 ease-in-out',
+          'fixed left-0 top-0 h-full max-h-screen w-[280px] sm:w-[290px] max-w-[85vw] bg-[#fbf9f8] border-r border-[#c4c6d0] flex flex-col py-5 sm:py-6 z-50 transition-transform duration-300 ease-in-out overflow-y-auto no-scrollbar',
           'lg:translate-x-0',
           mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:shadow-none'
         )}
       >
         {/* Header (Logo + Mobile Close Button) */}
-        <div className="px-6 mb-8 flex items-center justify-between">
+        <div className="px-5 sm:px-6 mb-6 sm:mb-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 overflow-hidden bg-[#03224d] shrink-0 rounded-lg shadow-xs">
-              <img src={njalaLogo} alt="Njala University Logo" className="w-full h-full object-cover" />
+            <div className="w-10 h-10 overflow-hidden bg-[#03224d] shrink-0 rounded-xl p-0.5 shadow-xs border border-[#c4c6d0]">
+              <img src={njalaLogo} alt="Njala University Logo" className="w-full h-full object-cover rounded-lg" />
             </div>
             <div>
-              <h1 className="text-[20px] font-bold leading-7 text-[#03224d]">NELMS</h1>
-              <p className="text-[12px] leading-4 text-[#44474f]">Academic Portal</p>
+              <h1 className="text-lg sm:text-[20px] font-bold leading-tight text-[#03224d]">NELMS</h1>
+              <p className="text-[11px] sm:text-[12px] font-medium text-[#086b53]">{ROLE_LABELS[role] ?? 'Academic Portal'}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="lg:hidden p-1.5 rounded-full text-[#44474f] hover:bg-[#eae8e7] transition-colors cursor-pointer"
-            aria-label="Close menu"
+            className="lg:hidden p-2 rounded-full text-[#44474f] hover:bg-[#eae8e7] hover:text-[#03224d] transition-colors cursor-pointer"
+            aria-label="Close navigation menu"
           >
             <span className="material-symbols-outlined text-[22px]">close</span>
           </button>
         </div>
 
         {/* Nav items */}
-        <nav className="flex-1 space-y-1 overflow-y-auto no-scrollbar">
+        <nav className="flex-1 space-y-1.5 px-3 sm:px-4">
           {items.map(({ icon, label, path }) => {
             const active = location.pathname === path || (path !== '/dashboard' && location.pathname.startsWith(path + '/'))
             return (
@@ -100,14 +108,14 @@ export default function Sidebar({ role, mobileOpen, onClose }) {
                 to={path}
                 onClick={onClose}
                 className={clsx(
-                  'flex items-center gap-3 px-6 py-3 transition-all duration-200 text-[14px] leading-[22px] font-medium',
+                  'flex items-center gap-3.5 px-3.5 py-2.5 sm:py-3 rounded-xl transition-all duration-200 text-sm font-semibold select-none',
                   active
-                    ? 'sidebar-item-active font-bold text-[#03224d]'
-                    : 'text-[#44474f] hover:bg-[#f0eded] hover:text-[#03224d] border-l-4 border-transparent'
+                    ? 'bg-[#03224d] text-white shadow-xs'
+                    : 'text-[#44474f] hover:bg-[#f0eded] hover:text-[#03224d]'
                 )}
               >
                 <span
-                  className="material-symbols-outlined"
+                  className="material-symbols-outlined text-[20px] sm:text-[22px]"
                   style={active ? { fontVariationSettings: "'FILL' 1" } : undefined}
                 >
                   {icon}
@@ -119,21 +127,21 @@ export default function Sidebar({ role, mobileOpen, onClose }) {
         </nav>
 
         {/* Bottom actions */}
-        <div className="mt-auto px-6 space-y-1.5 pt-4 border-t border-[#c4c6d0]/50">
+        <div className="mt-auto px-4 sm:px-5 space-y-1 pt-4 border-t border-[#c4c6d0]/60">
           <a
             href="mailto:support@njala.edu.sl"
-            className="flex items-center gap-3 px-3 py-2.5 -mx-3 text-[#44474f] hover:text-[#03224d] hover:bg-[#f0eded] rounded-lg transition-all text-[14px] font-medium group"
+            className="flex items-center gap-3 px-3 py-2.5 text-[#44474f] hover:text-[#03224d] hover:bg-[#f0eded] rounded-xl transition-all text-xs sm:text-sm font-semibold group"
           >
-            <span className="material-symbols-outlined group-hover:scale-110 transition-transform">help</span>
-            <span>Help Center</span>
+            <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">help</span>
+            <span>Help & Support</span>
           </a>
 
           <button
             onClick={() => setShowLogoutModal(true)}
-            className="flex items-center gap-3 px-3 py-2.5 -mx-3 text-[#ba1a1a] hover:bg-[#ffdad6]/50 rounded-lg transition-all text-[14px] font-semibold w-full cursor-pointer group active:scale-98"
+            className="flex items-center gap-3 px-3 py-2.5 text-[#ba1a1a] hover:bg-[#ffdad6]/60 rounded-xl transition-all text-xs sm:text-sm font-bold w-full cursor-pointer group active:scale-98"
           >
-            <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">logout</span>
-            <span>Logout</span>
+            <span className="material-symbols-outlined text-[20px] group-hover:translate-x-0.5 transition-transform">logout</span>
+            <span>Sign Out</span>
           </button>
         </div>
       </aside>
@@ -153,12 +161,12 @@ export default function Sidebar({ role, mobileOpen, onClose }) {
               Are you sure you want to end your session? Any unsaved form progress will be lost.
             </p>
 
-            <div className="flex justify-end gap-3 pt-3 border-t border-[#c4c6d0]/50">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2.5 pt-3 border-t border-[#c4c6d0]/50">
               <button
                 type="button"
                 disabled={isSigningOut}
                 onClick={() => setShowLogoutModal(false)}
-                className="px-4 py-2 text-[14px] font-semibold text-[#44474f] hover:bg-[#f0eded] rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                className="w-full sm:w-auto px-4 py-2 text-[14px] font-semibold text-[#44474f] hover:bg-[#f0eded] rounded-lg transition-colors cursor-pointer disabled:opacity-50 text-center"
               >
                 Cancel
               </button>
@@ -166,7 +174,7 @@ export default function Sidebar({ role, mobileOpen, onClose }) {
                 type="button"
                 disabled={isSigningOut}
                 onClick={handleConfirmLogout}
-                className="px-4 py-2 text-[14px] font-semibold text-white bg-[#ba1a1a] hover:bg-[#93000a] rounded-lg transition-all shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                className="w-full sm:w-auto px-4 py-2 text-[14px] font-semibold text-white bg-[#ba1a1a] hover:bg-[#93000a] rounded-lg transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {isSigningOut ? (
                   <>
