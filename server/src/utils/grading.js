@@ -1,11 +1,12 @@
 /**
- * Sierra Leone University Grading Policy Utility
- * Standard Sierra Leone Tertiary Grading Scale:
- * - A: 70% - 100% (GP: 4.0, Classification: Excellent / Distinction)
- * - B: 60% - 69%  (GP: 3.0, Classification: Very Good / Credit)
- * - C: 50% - 59%  (GP: 2.0, Classification: Satisfactory / Good)
- * - D: 45% - 49%  (GP: 1.0, Classification: Pass)
- * - F: 0%  - 44%  (GP: 0.0, Classification: Fail)
+ * Njala University 5.0 Point Grading Policy Utility (Server-side)
+ * Njala University Grading Scale (5.0 Scale):
+ * - A: 70% - 100% (GP: 5.0, Classification: Distinction / First Class)
+ * - B: 60% - 69%  (GP: 4.0, Classification: Credit / Second Class Upper)
+ * - C: 50% - 59%  (GP: 3.0, Classification: Good / Second Class Lower)
+ * - D: 45% - 49%  (GP: 2.0, Classification: Pass / Third Class)
+ * - E: 40% - 44%  (GP: 1.0, Classification: Bare Pass)
+ * - F: 0%  - 39%  (GP: 0.0, Classification: Fail)
  */
 
 export function calculateGrade(score, maxScore) {
@@ -16,16 +17,19 @@ export function calculateGrade(score, maxScore) {
   const percentage = Math.round((score / maxScore) * 100 * 10) / 10
 
   if (percentage >= 70) {
-    return { letterGrade: 'A', gradePoint: 4.0, classification: 'Distinction', percentage }
+    return { letterGrade: 'A', gradePoint: 5.0, classification: 'Distinction', percentage }
   }
   if (percentage >= 60) {
-    return { letterGrade: 'B', gradePoint: 3.0, classification: 'Credit', percentage }
+    return { letterGrade: 'B', gradePoint: 4.0, classification: 'Credit', percentage }
   }
   if (percentage >= 50) {
-    return { letterGrade: 'C', gradePoint: 2.0, classification: 'Good', percentage }
+    return { letterGrade: 'C', gradePoint: 3.0, classification: 'Good', percentage }
   }
   if (percentage >= 45) {
-    return { letterGrade: 'D', gradePoint: 1.0, classification: 'Pass', percentage }
+    return { letterGrade: 'D', gradePoint: 2.0, classification: 'Pass', percentage }
+  }
+  if (percentage >= 40) {
+    return { letterGrade: 'E', gradePoint: 1.0, classification: 'Bare Pass', percentage }
   }
   return { letterGrade: 'F', gradePoint: 0.0, classification: 'Fail', percentage }
 }

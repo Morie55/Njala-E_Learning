@@ -1,11 +1,12 @@
 /**
- * Sierra Leone Tertiary Grading Policy Helper (Client-side)
- * Standard Sierra Leone Grading Scale:
- * - A: 70% - 100% (GP: 4.0, Distinction)
- * - B: 60% - 69%  (GP: 3.0, Credit)
- * - C: 50% - 59%  (GP: 2.0, Good)
- * - D: 45% - 49%  (GP: 1.0, Pass)
- * - F: 0%  - 44%  (GP: 0.0, Fail)
+ * Njala University 5.0 Point Grading Scale Policy Helper (Client-side)
+ * Njala University Grading Scale (5.0 Scale):
+ * - A: 70% - 100% (GP: 5.0, Distinction / First Class)
+ * - B: 60% - 69%  (GP: 4.0, Credit / Second Class Upper)
+ * - C: 50% - 59%  (GP: 3.0, Good / Second Class Lower)
+ * - D: 45% - 49%  (GP: 2.0, Pass / Third Class)
+ * - E: 40% - 44%  (GP: 1.0, Pass / Bare Pass)
+ * - F: 0%  - 39%  (GP: 0.0, Fail)
  */
 
 export function calculateGrade(score, maxScore) {
@@ -35,7 +36,7 @@ export function calculateGrade(score, maxScore) {
   if (percentage >= 70) {
     return {
       letterGrade: 'A',
-      gradePoint: 4.0,
+      gradePoint: 5.0,
       classification: 'Distinction',
       percentage,
       badgeColor: 'bg-[#a0f3d4] text-[#00513e] border-[#086b53]',
@@ -44,7 +45,7 @@ export function calculateGrade(score, maxScore) {
   if (percentage >= 60) {
     return {
       letterGrade: 'B',
-      gradePoint: 3.0,
+      gradePoint: 4.0,
       classification: 'Credit',
       percentage,
       badgeColor: 'bg-[#d8e2ff] text-[#001a41] border-[#1f3864]',
@@ -53,7 +54,7 @@ export function calculateGrade(score, maxScore) {
   if (percentage >= 50) {
     return {
       letterGrade: 'C',
-      gradePoint: 2.0,
+      gradePoint: 3.0,
       classification: 'Good',
       percentage,
       badgeColor: 'bg-[#ffdcbb] text-[#543100] border-[#dd9235]',
@@ -62,10 +63,19 @@ export function calculateGrade(score, maxScore) {
   if (percentage >= 45) {
     return {
       letterGrade: 'D',
-      gradePoint: 1.0,
+      gradePoint: 2.0,
       classification: 'Pass',
       percentage,
       badgeColor: 'bg-[#f0eded] text-[#303030] border-[#747780]',
+    }
+  }
+  if (percentage >= 40) {
+    return {
+      letterGrade: 'E',
+      gradePoint: 1.0,
+      classification: 'Bare Pass',
+      percentage,
+      badgeColor: 'bg-[#f6f3f2] text-[#44474f] border-[#c4c6d0]',
     }
   }
   return {

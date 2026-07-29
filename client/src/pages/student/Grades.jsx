@@ -49,7 +49,7 @@ export default function Grades() {
   }, 0)
   const avgScore = graded.length ? Math.round((totalPercentage / graded.length) * 10) / 10 : null
 
-  // Calculate Cumulative GPA (CGPA) on 4.0 scale
+  // Calculate Cumulative GPA (CGPA) on 5.0 scale
   const totalGP = graded.reduce((sum, s) => {
     const g = calculateGrade(s.score, s.maxScore)
     return sum + g.gradePoint
@@ -113,10 +113,10 @@ export default function Grades() {
         {/* GPA card */}
         <div className="col-span-12 lg:col-span-4 bg-white border border-[#c4c6d0] p-6 rounded-xl relative overflow-hidden shadow-sm">
           <div className="relative z-10">
-            <p className="text-[12px] font-bold text-[#44474f] uppercase tracking-widest mb-3">Cumulative GPA (4.0 Scale)</p>
+            <p className="text-[12px] font-bold text-[#44474f] uppercase tracking-widest mb-3">Cumulative GPA (5.0 Scale)</p>
             <div className="flex items-baseline gap-2 mb-2">
               <span className="text-[52px] font-bold text-[#03224d] leading-none">{cgpa}</span>
-              <span className="text-[16px] text-[#44474f] font-semibold">/ 4.0</span>
+              <span className="text-[16px] text-[#44474f] font-semibold">/ 5.0</span>
             </div>
             {avgScore !== null && (
               <div className="flex items-center gap-2 text-[#086b53] font-semibold text-[13px]">
