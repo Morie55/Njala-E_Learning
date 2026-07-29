@@ -6,6 +6,7 @@ import LoadingSkeleton from './components/ui/LoadingSkeleton'
 import api from './lib/api'
 
 // Auth
+import LandingPage from './pages/LandingPage'
 import SignIn from './pages/auth/SignIn'
 import SignUp from './pages/auth/SignUp'
 import ActivateAccount from './pages/auth/ActivateAccount'
@@ -121,7 +122,16 @@ function RootErrorBoundary() {
   )
 }
 
+/** Root route handler: shows LandingPage for guests, redirects to /dashboard for signed-in users */
+function RootRoute() {
+  const { isSignedIn, isLoaded } = useAuth()
+  if (!isLoaded) return <div className="flex items-center justify-center min-h-screen"><LoadingSkeleton type="card" count={4} /></div>
+  if (isSignedIn) return <Navigate to="/dashboard" replace />
+  return <LandingPage />
+}
+
 const router = createBrowserRouter([
+  { path: '/',         element: <RootRoute /> },
   { path: '/sign-in',  element: <SignIn /> },
   { path: '/sign-up',  element: <SignUp /> },
   { path: '/activate', element: <RequireAuth><ActivateAccount /></RequireAuth> },
@@ -131,7 +141,6 @@ const router = createBrowserRouter([
     element: <RequireAuth><Outlet /></RequireAuth>,
     errorElement: <RootErrorBoundary />,
     children: [
-      { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: 'dashboard', element: <RoleDashboard /> },
 
       // ── Shared / Polymorphic ──
