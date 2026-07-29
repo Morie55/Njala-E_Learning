@@ -1,0 +1,17 @@
+{
+  "short_name": "NELMS",
+  "name": "Njala E-Learning Management System",
+  "description": "High-performance, mobile-optimized E-Learning platform for Njala University",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#fbf9f8",
+  "theme_color": "#03224d",
+  "display": "standalone",
+  "orientation": "portrait"
+}
