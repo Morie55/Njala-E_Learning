@@ -3,46 +3,46 @@ import njalaLogo from '../../assets/Njala University.jpg'
 
 export default function SignUp() {
   return (
-    <main className="min-h-screen flex flex-col md:flex-row bg-[#fbf9f8]">
+    <main className="min-h-screen flex flex-col md:flex-row bg-[#fbf9f8] text-[#1b1c1c]">
       {/* Left — Brand panel */}
-      <section className="w-full md:w-1/2 lg:w-5/12 brand-gradient flex flex-col justify-between p-6 sm:p-8 md:p-10 lg:p-12 relative overflow-hidden shrink-0 min-h-[320px] md:min-h-screen">
+      <section className="w-full md:w-1/2 lg:w-5/12 brand-gradient flex flex-col justify-between p-5 sm:p-8 md:p-10 lg:p-12 relative overflow-hidden shrink-0">
         {/* Top — Logo & Portal Badge */}
         <div className="relative z-10">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-xl p-1 bg-white/10 border border-white/20 backdrop-blur-md shadow-inner shrink-0 flex items-center justify-center">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl p-1 bg-white/10 border border-white/20 backdrop-blur-md shadow-inner shrink-0 flex items-center justify-center">
               <img src={njalaLogo} alt="Njala University Logo" className="w-full h-full object-cover rounded-lg" />
             </div>
             <div>
-              <h1 className="text-[20px] sm:text-[22px] font-bold leading-tight text-white tracking-wide">NELMS</h1>
-              <p className="text-[11px] text-[#a0f3d4] font-semibold uppercase tracking-widest">Academic Portal</p>
+              <h1 className="text-lg sm:text-[22px] font-bold leading-tight text-white tracking-wide">NELMS</h1>
+              <p className="text-[10px] sm:text-[11px] text-[#a0f3d4] font-semibold uppercase tracking-widest">Academic Portal</p>
             </div>
           </div>
         </div>
 
         {/* Center — Headline & Intro */}
-        <div className="relative z-10 max-w-lg my-8 md:my-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 backdrop-blur-md text-[12px] font-medium text-white/90 mb-4">
+        <div className="relative z-10 max-w-lg my-6 sm:my-8 md:my-auto">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 backdrop-blur-md text-[11px] sm:text-[12px] font-medium text-white/90 mb-3 sm:mb-4">
             <span className="w-2 h-2 rounded-full bg-[#a0f3d4] animate-pulse" />
             New Account Registration
           </div>
-          <h2 className="text-[26px] sm:text-[32px] lg:text-[36px] font-bold leading-tight text-white mb-3 sm:mb-4">
+          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-[36px] font-bold leading-tight text-white mb-2 sm:mb-4">
             Join the Academic Community.
           </h2>
-          <p className="text-[14px] sm:text-[16px] leading-relaxed text-white/80">
+          <p className="text-xs sm:text-sm md:text-base leading-relaxed text-white/80 hidden sm:block">
             Create your account using your official university email address to get started with Njala University's e-learning platform.
           </p>
         </div>
 
         {/* Bottom — System Authority Badges */}
-        <div className="relative z-10 pt-6 border-t border-white/15 flex flex-wrap items-center justify-between gap-4">
+        <div className="relative z-10 pt-4 sm:pt-6 border-t border-white/15 flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm">
           <div className="flex flex-col">
-            <span className="text-[11px] font-semibold tracking-wider text-white/50 uppercase">Institution</span>
-            <span className="text-[14px] font-semibold text-white mt-0.5">Njala University</span>
+            <span className="text-[10px] sm:text-[11px] font-semibold tracking-wider text-white/50 uppercase">Institution</span>
+            <span className="font-semibold text-white mt-0.5">Njala University</span>
           </div>
-          <div className="w-px h-8 bg-white/20 hidden sm:block" />
+          <div className="w-px h-6 sm:h-8 bg-white/20 hidden sm:block" />
           <div className="flex flex-col">
-            <span className="text-[11px] font-semibold tracking-wider text-white/50 uppercase">Registration</span>
-            <span className="text-[14px] font-semibold text-white mt-0.5 flex items-center gap-2">
+            <span className="text-[10px] sm:text-[11px] font-semibold tracking-wider text-white/50 uppercase">Registration</span>
+            <span className="font-semibold text-white mt-0.5 flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-[#a0f3d4] shadow-[0_0_8px_#a0f3d4]" />
               Role Verified
             </span>
@@ -50,17 +50,17 @@ export default function SignUp() {
         </div>
 
         {/* Background ambient lighting effects */}
-        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-[#086b53]/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-1/4 -left-12 w-80 h-80 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -right-24 w-72 sm:w-96 h-72 sm:h-96 bg-[#086b53]/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/4 -left-12 w-64 sm:w-80 h-64 sm:h-80 bg-white/5 rounded-full blur-3xl pointer-events-none" />
       </section>
 
       {/* Right — Clerk sign-up section */}
-      <section className="w-full md:w-1/2 lg:w-7/12 flex items-center justify-center p-4 sm:p-8 md:p-12">
+      <section className="w-full md:w-1/2 lg:w-7/12 flex items-center justify-center p-4 sm:p-8 md:p-12 my-auto">
         <div className="w-full max-w-md">
           {/* Header */}
-          <div className="mb-6">
-            <h2 className="text-[24px] sm:text-[28px] font-bold text-[#03224d]">Create Account</h2>
-            <p className="text-[14px] text-[#44474f] mt-1">Use your official university email address to register.</p>
+          <div className="mb-4 sm:mb-6 text-center sm:text-left">
+            <h2 className="text-xl sm:text-2xl md:text-[28px] font-bold text-[#03224d]">Create Account</h2>
+            <p className="text-xs sm:text-sm text-[#44474f] mt-1">Use your official university email address to register.</p>
           </div>
 
           {/* Form */}
@@ -68,23 +68,26 @@ export default function SignUp() {
             appearance={{
               elements: {
                 rootBox: 'w-full',
-                card: 'shadow-sm border border-[#c4c6d0] rounded-2xl p-6 sm:p-8 bg-white w-full',
+                card: 'shadow-xs border border-[#c4c6d0] rounded-xl sm:rounded-2xl p-4 sm:p-8 bg-white w-full',
                 headerTitle: 'hidden',
                 headerSubtitle: 'hidden',
-                socialButtonsBlockButton: 'border border-[#c4c6d0] hover:border-[#03224d] rounded-lg text-[#1b1c1c] hover:bg-[#f6f3f2] transition-colors py-2.5 text-[14px] font-medium',
-                formButtonPrimary: 'bg-[#03224d] hover:bg-[#1f3864] text-white rounded-lg py-2.5 text-[14px] font-bold transition-all shadow-sm',
-                formFieldInput: 'border border-[#c4c6d0] rounded-lg text-[14px] px-3.5 py-2.5 focus:border-[#03224d] focus:ring-2 focus:ring-[#03224d]/20 transition-all',
-                formFieldLabel: 'text-[13px] font-semibold text-[#1b1c1c]',
+                socialButtonsBlockButton:
+                  'border border-[#c4c6d0] hover:border-[#03224d] rounded-lg text-[#1b1c1c] hover:bg-[#f6f3f2] transition-colors py-2.5 text-xs sm:text-sm font-medium',
+                formButtonPrimary:
+                  'bg-[#03224d] hover:bg-[#1f3864] text-white rounded-lg py-2.5 text-sm font-bold transition-all shadow-xs w-full cursor-pointer',
+                formFieldInput:
+                  'border border-[#c4c6d0] rounded-lg text-base sm:text-sm px-3.5 py-2.5 focus:border-[#03224d] focus:ring-2 focus:ring-[#03224d]/20 transition-all w-full',
+                formFieldLabel: 'text-xs sm:text-sm font-semibold text-[#1b1c1c]',
                 footerActionLink: 'text-[#03224d] font-bold hover:underline',
-                identityPreviewText: 'text-[#1b1c1c] font-medium',
+                identityPreviewText: 'text-[#1b1c1c] font-medium text-xs sm:text-sm',
               },
             }}
             redirectUrl="/dashboard"
           />
 
           {/* Help Footer */}
-          <div className="mt-6 pt-6 border-t border-[#c4c6d0] text-center">
-            <p className="text-[13px] text-[#44474f]">
+          <div className="mt-5 sm:mt-6 pt-4 sm:pt-6 border-t border-[#c4c6d0] text-center">
+            <p className="text-xs sm:text-sm text-[#44474f]">
               Need assistance?{' '}
               <a href="mailto:keitamorie@gmail.com" className="text-[#03224d] font-bold hover:underline">
                 Contact IT Support
