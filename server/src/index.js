@@ -21,6 +21,7 @@ import notificationRoutes from './routes/notifications.js'
 // Middleware & Script imports
 import { enforceStatus } from './middleware/enforceStatus.js'
 import { startLifecycleSweep } from './scripts/lifecycleSweep.js'
+import { startKeepAlive } from './scripts/keepAlive.js'
 
 const app = express()
 
@@ -88,6 +89,7 @@ mongoose
   .then(() => {
     console.log('[DB] Connected to MongoDB Atlas')
     startLifecycleSweep()
+    startKeepAlive()
     app.listen(PORT, () => console.log(`[SERVER] Listening on port ${PORT}`))
   })
   .catch(err => {
