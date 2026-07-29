@@ -70,7 +70,7 @@ export default function NotificationDropdown({ onClose, onUpdateCount }) {
   return (
     <div
       ref={ref}
-      className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white border border-[#c4c6d0] rounded-xl shadow-lg z-50 overflow-hidden"
+      className="absolute right-0 top-full mt-2 w-80 sm:w-96 max-w-[calc(100vw-24px)] bg-white border border-[#c4c6d0] rounded-xl shadow-lg z-50 overflow-hidden"
       style={{ boxShadow: '0 8px 24px -8px rgba(3,34,77,0.12)' }}
     >
       <div className="px-4 py-3 border-b border-[#c4c6d0] flex items-center justify-between bg-[#fbf9f8]">

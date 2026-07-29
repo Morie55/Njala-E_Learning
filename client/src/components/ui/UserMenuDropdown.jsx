@@ -45,7 +45,7 @@ export default function UserMenuDropdown({ user, role, onClose }) {
   return (
     <div
       ref={ref}
-      className="absolute right-0 top-full mt-2 w-72 bg-white border border-[#c4c6d0] rounded-xl shadow-xl z-50 overflow-hidden"
+      className="absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-24px)] bg-white border border-[#c4c6d0] rounded-xl shadow-xl z-50 overflow-hidden"
       style={{ boxShadow: '0 12px 32px -8px rgba(3,34,77,0.15)' }}
     >
       {/* Header Profile Section */}
