@@ -70,8 +70,8 @@ export default function NotificationDropdown({ onClose, onUpdateCount }) {
   return (
     <div
       ref={ref}
-      className="absolute -right-12 sm:right-0 top-full mt-2 w-[300px] xs:w-80 sm:w-96 max-w-[calc(100vw-24px)] bg-white border border-[#c4c6d0] rounded-xl sm:rounded-2xl shadow-xl z-50 overflow-hidden font-sans"
-      style={{ boxShadow: '0 12px 32px -8px rgba(3,34,77,0.15)' }}
+      className="fixed top-16 right-3 left-3 sm:absolute sm:top-full sm:right-0 sm:left-auto sm:mt-2 sm:w-96 max-w-md sm:max-w-none ml-auto bg-white border border-[#c4c6d0] rounded-xl sm:rounded-2xl shadow-2xl z-50 overflow-hidden font-sans"
+      style={{ boxShadow: '0 12px 32px -8px rgba(3,34,77,0.18)' }}
     >
       <div className="px-3.5 sm:px-4 py-3 border-b border-[#c4c6d0] flex items-center justify-between bg-[#fbf9f8]">
         <div className="flex items-center gap-2">
