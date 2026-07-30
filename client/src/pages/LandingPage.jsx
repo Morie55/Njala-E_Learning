@@ -486,50 +486,55 @@ export default function LandingPage() {
 
       {/* ── Feature Detail Modal ── */}
       {activeFeatureModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-[#c4c6d0] relative overflow-hidden font-sans">
-            <button
-              onClick={() => setActiveFeatureModal(null)}
-              className="absolute top-4 right-4 p-1.5 text-[#44474f] hover:bg-[#eae8e7] rounded-full transition-colors cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[20px]">close</span>
-            </button>
-
-            <div className="flex items-center gap-3 mb-4">
-              <div className={`w-12 h-12 ${activeFeatureModal.color} rounded-xl flex items-center justify-center shrink-0`}>
-                <span className="material-symbols-outlined text-[26px]">{activeFeatureModal.icon}</span>
-              </div>
-              <div>
-                <h3 className="text-xl font-extrabold text-[#03224d]">{activeFeatureModal.title}</h3>
-                <span className="text-xs font-bold uppercase tracking-wider text-[#086b53]">NELMS Platform Capability</span>
-              </div>
-            </div>
-
-            <p className="text-sm text-[#44474f] leading-relaxed mb-5">
-              {activeFeatureModal.details}
-            </p>
-
-            <div className="space-y-2 mb-6 bg-[#f6f3f2] p-4 rounded-xl border border-[#c4c6d0]/60">
-              <p className="text-xs font-bold uppercase tracking-wider text-[#03224d] mb-2">Key Workflow Highlights:</p>
-              {activeFeatureModal.highlights.map((h) => (
-                <div key={h} className="flex items-start gap-2 text-xs text-[#1b1c1c] font-medium">
-                  <span className="material-symbols-outlined text-[#086b53] text-[16px] shrink-0 mt-0.5">check_circle</span>
-                  <span>{h}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#c4c6d0]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/65 backdrop-blur-xs animate-fade-in overflow-y-auto">
+          <div className="bg-white rounded-xl sm:rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-2xl border border-[#c4c6d0] relative overflow-hidden font-sans max-h-[90vh] flex flex-col justify-between">
+            <div>
               <button
                 onClick={() => setActiveFeatureModal(null)}
-                className="px-4 py-2 text-xs font-bold text-[#44474f] hover:bg-[#eae8e7] rounded-lg transition-colors cursor-pointer"
+                className="absolute top-3 right-3 sm:top-4 sm:right-4 p-1.5 text-[#44474f] hover:bg-[#eae8e7] rounded-full transition-colors cursor-pointer"
+                aria-label="Close modal"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+
+              <div className="flex items-center gap-3 mb-3 sm:mb-4 pr-6">
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 ${activeFeatureModal.color} rounded-xl flex items-center justify-center shrink-0`}>
+                  <span className="material-symbols-outlined text-[22px] sm:text-[26px]">{activeFeatureModal.icon}</span>
+                </div>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-extrabold text-[#03224d] leading-tight">{activeFeatureModal.title}</h3>
+                  <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#086b53]">NELMS Platform Capability</span>
+                </div>
+              </div>
+
+              <div className="overflow-y-auto pr-1 space-y-4 max-h-[50vh] sm:max-h-none">
+                <p className="text-xs sm:text-sm text-[#44474f] leading-relaxed">
+                  {activeFeatureModal.details}
+                </p>
+
+                <div className="space-y-2 bg-[#f6f3f2] p-3.5 sm:p-4 rounded-xl border border-[#c4c6d0]/60">
+                  <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#03224d] mb-2">Key Workflow Highlights:</p>
+                  {activeFeatureModal.highlights.map((h) => (
+                    <div key={h} className="flex items-start gap-2 text-xs text-[#1b1c1c] font-medium leading-normal">
+                      <span className="material-symbols-outlined text-[#086b53] text-[16px] shrink-0 mt-0.5">check_circle</span>
+                      <span>{h}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-4 mt-4 border-t border-[#c4c6d0] shrink-0">
+              <button
+                onClick={() => setActiveFeatureModal(null)}
+                className="w-full sm:w-auto text-center px-4 py-2.5 sm:py-2 text-xs font-bold text-[#44474f] hover:bg-[#eae8e7] rounded-lg transition-colors cursor-pointer"
               >
                 Close
               </button>
               <Link
                 to="/sign-in"
                 onClick={() => setActiveFeatureModal(null)}
-                className="bg-[#03224d] hover:bg-[#001736] text-white px-5 py-2.5 rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                className="w-full sm:w-auto justify-center bg-[#03224d] hover:bg-[#001736] text-white px-5 py-2.5 sm:py-2 rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
                 <span>Access Portal</span>
                 <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
@@ -541,72 +546,77 @@ export default function LandingPage() {
 
       {/* ── Academic School Detail Modal ── */}
       {activeSchoolModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-[#c4c6d0] relative overflow-hidden font-sans max-h-[90vh] overflow-y-auto">
-            <button
-              onClick={() => setActiveSchoolModal(null)}
-              className="absolute top-4 right-4 p-1.5 text-[#44474f] hover:bg-[#eae8e7] rounded-full transition-colors cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[20px]">close</span>
-            </button>
-
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-xs font-bold font-mono bg-[#03224d] text-white px-3 py-1.5 rounded-lg">
-                {activeSchoolModal.code}
-              </span>
-              <div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-[#03224d] leading-tight">{activeSchoolModal.name}</h3>
-                <p className="text-xs text-[#086b53] font-semibold">{activeSchoolModal.campus}</p>
-              </div>
-            </div>
-
-            <p className="text-sm text-[#44474f] leading-relaxed mb-5">
-              {activeSchoolModal.overview}
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-              <div className="bg-[#f6f3f2] p-4 rounded-xl border border-[#c4c6d0]/60">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#03224d] mb-2 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[16px] text-[#086b53]">domain</span>
-                  Departments
-                </p>
-                <ul className="space-y-1.5">
-                  {activeSchoolModal.departments.map((d) => (
-                    <li key={d} className="text-xs text-[#1b1c1c] font-medium flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#086b53]" />
-                      <span>{d}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="bg-[#f6f3f2] p-4 rounded-xl border border-[#c4c6d0]/60">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#03224d] mb-2 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[16px] text-[#03224d]">school</span>
-                  Degree Offerings
-                </p>
-                <ul className="space-y-1.5">
-                  {activeSchoolModal.degrees.map((deg) => (
-                    <li key={deg} className="text-xs text-[#1b1c1c] font-medium flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#03224d]" />
-                      <span>{deg}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#c4c6d0]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/65 backdrop-blur-xs animate-fade-in overflow-y-auto">
+          <div className="bg-white rounded-xl sm:rounded-2xl max-w-xl w-full p-4 sm:p-6 shadow-2xl border border-[#c4c6d0] relative overflow-hidden font-sans max-h-[90vh] flex flex-col justify-between">
+            <div>
               <button
                 onClick={() => setActiveSchoolModal(null)}
-                className="px-4 py-2 text-xs font-bold text-[#44474f] hover:bg-[#eae8e7] rounded-lg transition-colors cursor-pointer"
+                className="absolute top-3 right-3 sm:top-4 sm:right-4 p-1.5 text-[#44474f] hover:bg-[#eae8e7] rounded-full transition-colors cursor-pointer"
+                aria-label="Close modal"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+
+              <div className="flex items-center gap-3 mb-3 sm:mb-4 pr-6">
+                <span className="text-xs font-bold font-mono bg-[#03224d] text-white px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg shrink-0">
+                  {activeSchoolModal.code}
+                </span>
+                <div>
+                  <h3 className="text-base sm:text-xl font-extrabold text-[#03224d] leading-tight">{activeSchoolModal.name}</h3>
+                  <p className="text-[11px] sm:text-xs text-[#086b53] font-semibold">{activeSchoolModal.campus}</p>
+                </div>
+              </div>
+
+              <div className="overflow-y-auto pr-1 space-y-4 max-h-[55vh] sm:max-h-none">
+                <p className="text-xs sm:text-sm text-[#44474f] leading-relaxed">
+                  {activeSchoolModal.overview}
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="bg-[#f6f3f2] p-3.5 sm:p-4 rounded-xl border border-[#c4c6d0]/60">
+                    <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#03224d] mb-2 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[16px] text-[#086b53]">domain</span>
+                      Departments
+                    </p>
+                    <ul className="space-y-1.5">
+                      {activeSchoolModal.departments.map((d) => (
+                        <li key={d} className="text-xs text-[#1b1c1c] font-medium flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#086b53] shrink-0" />
+                          <span>{d}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="bg-[#f6f3f2] p-3.5 sm:p-4 rounded-xl border border-[#c4c6d0]/60">
+                    <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#03224d] mb-2 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[16px] text-[#03224d]">school</span>
+                      Degree Offerings
+                    </p>
+                    <ul className="space-y-1.5">
+                      {activeSchoolModal.degrees.map((deg) => (
+                        <li key={deg} className="text-xs text-[#1b1c1c] font-medium flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#03224d] shrink-0" />
+                          <span>{deg}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-4 mt-4 border-t border-[#c4c6d0] shrink-0">
+              <button
+                onClick={() => setActiveSchoolModal(null)}
+                className="w-full sm:w-auto text-center px-4 py-2.5 sm:py-2 text-xs font-bold text-[#44474f] hover:bg-[#eae8e7] rounded-lg transition-colors cursor-pointer"
               >
                 Close
               </button>
               <Link
                 to="/sign-in"
                 onClick={() => setActiveSchoolModal(null)}
-                className="bg-[#086b53] hover:bg-[#065441] text-white px-5 py-2.5 rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                className="w-full sm:w-auto justify-center bg-[#086b53] hover:bg-[#065441] text-white px-5 py-2.5 sm:py-2 rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
                 <span>View School Courses</span>
                 <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
