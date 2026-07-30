@@ -159,11 +159,6 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left Content */}
             <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/15 backdrop-blur-md text-xs sm:text-sm font-medium text-[#a0f3d4]">
-                <span className="w-2 h-2 rounded-full bg-[#a0f3d4] animate-pulse" />
-                Njala University Official Academic Portal
-              </div>
-
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight text-white">
                 Empowering Academic Excellence Through Digital Learning.
               </h1>
@@ -228,26 +223,6 @@ export default function LandingPage() {
                     alt="Njala University Faculty Building"
                     className="w-full h-[320px] sm:h-[420px] object-cover rounded-xl shadow-inner"
                   />
-
-                  {/* Overlay Badge 1 */}
-                  <div className="absolute top-6 left-6 bg-[#03224d]/90 border border-white/20 backdrop-blur-md p-3.5 rounded-xl text-white shadow-xl flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-[#086b53] flex items-center justify-center shrink-0">
-                      <span className="material-symbols-outlined text-white text-[20px]">verified</span>
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-white">Njala University</p>
-                      <p className="text-[11px] text-[#a0f3d4] font-medium">Main Campus Portal</p>
-                    </div>
-                  </div>
-
-                  {/* Overlay Badge 2 */}
-                  <div className="absolute bottom-6 right-6 bg-white/95 border border-[#c4c6d0] text-[#03224d] p-3.5 rounded-xl shadow-xl flex items-center gap-3">
-                    <span className="material-symbols-outlined text-[#086b53] text-[24px]">grade</span>
-                    <div>
-                      <p className="text-xs font-bold">Digital Gradebooks</p>
-                      <p className="text-[11px] text-[#44474f]">Automated Submissions</p>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
