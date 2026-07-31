@@ -135,6 +135,24 @@ router.get('/thread/:otherUserId', ...auth, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+async function canMessage(senderId, senderRole, recipientId, recipientRole) {
+  if (['admin', 'dept_head'].includes(senderRole) || ['admin', 'dept_head'].includes(recipientRole)) {
+    return true
+  }
+
+  const courseIds = await Course.find({
+    lecturerId: senderRole === 'lecturer' ? senderId : recipientId,
+  }).distinct('_id')
+
+  const sharedCourse = await Enrollment.exists({
+    studentId: senderRole === 'student' ? senderId : recipientId,
+    courseId: { $in: courseIds },
+    status: 'active',
+  })
+
+  return Boolean(sharedCourse)
+}
+
 /**
  * POST /api/v1/messages
  * Send a direct message.
@@ -148,6 +166,10 @@ router.post('/', ...auth, async (req, res, next) => {
 
     const recipient = await User.findById(recipientId).lean()
     if (!recipient) return res.status(404).json({ error: 'Recipient not found' })
+
+    if (!(await canMessage(req.dbUser._id, req.dbUser.role, recipientId, recipient.role))) {
+      return res.status(403).json({ error: 'You can only message lecturers or students you share a course with' })
+    }
 
     const message = await Message.create({
       senderId: req.dbUser._id,

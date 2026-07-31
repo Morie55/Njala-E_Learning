@@ -10,8 +10,8 @@ import { computeSimilarity } from '../utils/plagiarismEngine.js'
 const router = Router()
 const auth = [requireAuth, populateUser, enforceStatus]
 
-/** POST /api/v1/submissions/:id/check-plagiarism [lecturer/dept_head/admin] */
-router.post('/submissions/:id/check-plagiarism', ...auth, async (req, res, next) => {
+/** POST /api/v1/plagiarism/submissions/:id [lecturer/dept_head/admin] */
+router.post('/submissions/:id', ...auth, async (req, res, next) => {
   const { role, _id } = req.dbUser
   if (!['lecturer', 'dept_head', 'admin'].includes(role)) return res.status(403).json({ error: 'Forbidden' })
 
@@ -82,8 +82,8 @@ router.post('/submissions/:id/check-plagiarism', ...auth, async (req, res, next)
   } catch (err) { next(err) }
 })
 
-/** POST /api/v1/assignments/:id/check-all-plagiarism [lecturer/dept_head/admin] */
-router.post('/assignments/:id/check-all-plagiarism', ...auth, async (req, res, next) => {
+/** POST /api/v1/plagiarism/assignments/:id [lecturer/dept_head/admin] */
+router.post('/assignments/:id', ...auth, async (req, res, next) => {
   const { role, _id } = req.dbUser
   if (!['lecturer', 'dept_head', 'admin'].includes(role)) return res.status(403).json({ error: 'Forbidden' })
 

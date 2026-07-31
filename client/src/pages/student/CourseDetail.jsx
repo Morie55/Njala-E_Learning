@@ -47,7 +47,7 @@ export default function CourseDetail() {
     const isDone = completedMaterialIds.has(materialId)
     try {
       if (isDone) {
-        await api.delete(`/materials/${materialId}/complete`)
+        await api.delete(`/materials/progress/${materialId}/complete`)
         setCompletedMaterialIds(prev => {
           const next = new Set(prev)
           next.delete(materialId)
@@ -55,7 +55,7 @@ export default function CourseDetail() {
         })
         showToast('Material unmarked')
       } else {
-        await api.post(`/materials/${materialId}/complete`)
+        await api.post(`/materials/progress/${materialId}/complete`)
         setCompletedMaterialIds(prev => new Set([...prev, materialId]))
         showToast('Material marked as complete! 🎉', 'success')
       }

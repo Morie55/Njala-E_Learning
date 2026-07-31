@@ -10,7 +10,7 @@ const router = Router()
 const auth = [requireAuth, populateUser, enforceStatus]
 
 /**
- * POST /api/v1/materials/:id/complete  [student]
+ * POST /api/v1/materials/progress/:id/complete  [student]
  * Mark a material as completed for the authenticated student.
  */
 router.post('/:id/complete', ...auth, async (req, res, next) => {
@@ -33,7 +33,7 @@ router.post('/:id/complete', ...auth, async (req, res, next) => {
 })
 
 /**
- * DELETE /api/v1/materials/:id/complete  [student]
+ * DELETE /api/v1/materials/progress/:id/complete  [student]
  * Unmark a material (toggle off).
  */
 router.delete('/:id/complete', ...auth, async (req, res, next) => {
@@ -48,7 +48,7 @@ router.delete('/:id/complete', ...auth, async (req, res, next) => {
  * GET /api/v1/materials/progress/:courseId  [student]
  * Return all completed materialIds for this student in the given course.
  */
-router.get('/progress/:courseId', ...auth, async (req, res, next) => {
+router.get('/:courseId', ...auth, async (req, res, next) => {
   if (req.dbUser.role !== 'student') return res.status(403).json({ error: 'Students only' })
   try {
     const completed = await MaterialProgress.find({

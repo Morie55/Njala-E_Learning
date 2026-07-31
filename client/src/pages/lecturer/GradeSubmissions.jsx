@@ -41,7 +41,7 @@ export default function GradeSubmissions() {
   async function handleScanPlagiarism(subId) {
     setScanningPlagiarism(p => ({ ...p, [subId]: true }))
     try {
-      const res = await api.post(`/submissions/${subId}/check-plagiarism`)
+      const res = await api.post(`/plagiarism/submissions/${subId}`)
       setSubmissions(prev => prev.map(s => s._id === subId ? {
         ...s,
         plagiarismScore: res.data.plagiarismScore,
@@ -58,7 +58,7 @@ export default function GradeSubmissions() {
   async function handleBatchPlagiarism() {
     setBatchScanning(true)
     try {
-      await api.post(`/assignments/${assignmentId}/check-all-plagiarism`)
+      await api.post(`/plagiarism/assignments/${assignmentId}`)
       fetchSubmissions()
     } catch (err) {
       alert(err.response?.data?.error ?? 'Batch plagiarism scan failed')

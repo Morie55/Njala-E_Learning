@@ -86,10 +86,10 @@ app.use('/api/v1/quizzes', quizRoutes)
 app.use('/api/v1/timetable', timetableRoutes)
 app.use('/api/v1/academic-periods', academicPeriodRoutes)
 app.use('/api/v1/search', searchRoutes)
-app.use('/api/v1/materials', materialProgressRoutes)
+app.use('/api/v1/materials/progress', materialProgressRoutes)
 app.use('/api/v1/messages', messageRoutes)
 app.use('/api/v1/wassce', wassceRoutes)
-app.use('/api/v1', plagiarismRoutes)
+app.use('/api/v1/plagiarism', plagiarismRoutes)
 
 // Health check
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }))
