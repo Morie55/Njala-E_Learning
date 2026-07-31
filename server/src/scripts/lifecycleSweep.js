@@ -5,6 +5,7 @@ const TWO_YEARS_MS = 2 * 365 * 24 * 60 * 60 * 1000
 
 export function startLifecycleSweep() {
   // Daily scheduled sweep at 3:00 AM
+  // suppressMissedWarning: true prevents catch-up warnings on server restart
   cron.schedule('0 3 * * *', async () => {
     try {
       const now = Date.now()
@@ -26,7 +27,7 @@ export function startLifecycleSweep() {
     } catch (err) {
       console.error('[LIFECYCLE SWEEP ERROR]', err.message)
     }
-  })
+  }, { suppressMissedWarning: true })
 
   console.log('[LIFECYCLE] User lifecycle sweep task initialized (scheduled daily at 3:00 AM).')
 }

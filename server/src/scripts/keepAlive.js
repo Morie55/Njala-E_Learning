@@ -4,6 +4,7 @@ export function startKeepAlive() {
   const serverUrl = process.env.SERVER_URL || process.env.RENDER_EXTERNAL_URL
 
   // Schedule self-ping every 10 minutes
+  // suppressMissedWarning: true prevents catch-up warnings on server restart
   cron.schedule('*/10 * * * *', async () => {
     if (!serverUrl) return
 
@@ -18,7 +19,7 @@ export function startKeepAlive() {
     } catch (err) {
       console.error(`[KEEP-ALIVE] Ping error: ${err.message}`)
     }
-  })
+  }, { suppressMissedWarning: true })
 
   if (serverUrl) {
     console.log(`[KEEP-ALIVE] Self-ping scheduled every 10 minutes for: ${serverUrl}`)
