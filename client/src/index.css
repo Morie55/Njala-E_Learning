@@ -168,12 +168,28 @@ body {
 
 /* Shimmer animation for skeletons */
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0%   { background-position: -300% 0; }
+  100% { background-position: 300% 0; }
+}
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
 }
 .skeleton {
-  background: linear-gradient(90deg, #eae8e7 25%, #f0eded 50%, #eae8e7 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 4px;
+  background: linear-gradient(
+    100deg,
+    #ede9e8 0%,
+    #e4e1df 20%,
+    #f4f1f0 40%,
+    #e4e1df 60%,
+    #ede9e8 80%
+  );
+  background-size: 300% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  border-radius: 6px;
+}
+.skeleton-pulse {
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+  background-color: #e4e1df;
+  border-radius: 8px;
 }
