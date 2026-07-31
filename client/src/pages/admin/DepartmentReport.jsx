@@ -61,14 +61,14 @@ export default function DepartmentReport() {
     <AppLayout role={role}>
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-[32px] font-semibold text-[#03224d]">Department Report</h2>
-          <p className="text-[14px] text-[#44474f]">Aggregate performance statistics for each department.</p>
+          <h2 className="text-[24px] sm:text-[32px] font-semibold text-[#03224d]">Department Report</h2>
+          <p className="text-[13px] sm:text-[14px] text-[#44474f]">Aggregate performance statistics for each department.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col xs:flex-row sm:flex-row gap-2 w-full sm:w-auto">
           <select
             value={selectedDept}
             onChange={e => setSelectedDept(e.target.value)}
-            className="border border-[#c4c6d0] rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-[#03224d] bg-white"
+            className="w-full sm:w-64 border border-[#c4c6d0] rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-[#03224d] bg-white truncate"
           >
             <option value="">Select department…</option>
             {departments.map(d => (
@@ -78,7 +78,7 @@ export default function DepartmentReport() {
           {report && (
             <button
               onClick={handleExport}
-              className="flex items-center gap-1.5 px-4 py-2 border border-[#c4c6d0] text-[#03224d] font-bold text-[12px] hover:bg-[#f0eded] rounded-lg"
+              className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2 border border-[#c4c6d0] text-[#03224d] font-bold text-[12px] hover:bg-[#f0eded] rounded-lg shrink-0"
             >
               <span className="material-symbols-outlined text-[16px]">download</span>CSV
             </button>
@@ -89,47 +89,47 @@ export default function DepartmentReport() {
       {loading && selectedDept && <LoadingSkeleton type="stat" count={4} />}
 
       {!selectedDept && !loading && (
-        <div className="bg-white border border-[#c4c6d0] rounded-2xl p-14 text-center">
-          <span className="material-symbols-outlined text-5xl text-[#c4c6d0] block mb-3">business</span>
-          <p className="text-[14px] text-[#44474f]">Select a department above to view its report.</p>
+        <div className="bg-white border border-[#c4c6d0] rounded-2xl p-8 sm:p-14 text-center">
+          <span className="material-symbols-outlined text-4xl sm:text-5xl text-[#c4c6d0] block mb-3">business</span>
+          <p className="text-[13px] sm:text-[14px] text-[#44474f]">Select a department above to view its report.</p>
         </div>
       )}
 
       {report && (
         <div className="space-y-6">
           {/* Header card */}
-          <div className="bg-[#03224d] text-white rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-[#03224d] text-white rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <p className="text-[12px] opacity-70 uppercase tracking-wider">Department</p>
-              <h3 className="text-[22px] font-bold">{report.department?.name}</h3>
-              <p className="text-[13px] opacity-75">{report.department?.code} · {report.school?.name}</p>
+              <p className="text-[11px] sm:text-[12px] opacity-70 uppercase tracking-wider">Department</p>
+              <h3 className="text-[18px] sm:text-[22px] font-bold">{report.department?.name}</h3>
+              <p className="text-[12px] sm:text-[13px] opacity-75">{report.department?.code} · {report.school?.name}</p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full sm:w-auto">
               <div className="bg-white/10 rounded-xl p-3 text-center">
-                <p className="text-[22px] font-extrabold">{report.totalStudents}</p>
+                <p className="text-[18px] sm:text-[22px] font-extrabold">{report.totalStudents}</p>
                 <p className="text-[10px] opacity-75 uppercase tracking-wider">Students</p>
               </div>
               <div className="bg-white/10 rounded-xl p-3 text-center">
-                <p className="text-[22px] font-extrabold">{report.totalLecturers}</p>
+                <p className="text-[18px] sm:text-[22px] font-extrabold">{report.totalLecturers}</p>
                 <p className="text-[10px] opacity-75 uppercase tracking-wider">Lecturers</p>
               </div>
             </div>
           </div>
 
           {/* KPI grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {[
               { label: 'Total Courses', value: report.totalCourses, icon: 'menu_book', color: 'text-[#03224d]', bg: 'bg-[#d8e2ff]/20' },
               { label: 'Active Courses', value: report.activeCourses, icon: 'play_circle', color: 'text-[#086b53]', bg: 'bg-[#a0f3d4]/20' },
               { label: 'Total Submissions', value: report.totalSubmissions, icon: 'assignment_turned_in', color: 'text-[#dd9235]', bg: 'bg-[#ffe8b5]/20' },
               { label: 'Avg Score', value: report.avgScore !== null ? `${report.avgScore}%` : '—', icon: 'analytics', color: report.avgScore >= 50 ? 'text-[#086b53]' : 'text-[#ba1a1a]', bg: 'bg-[#f6f3f2]' },
             ].map(k => (
-              <div key={k.label} className={`bg-white border border-[#c4c6d0] rounded-2xl p-5 shadow-sm ${k.bg}`}>
+              <div key={k.label} className={`bg-white border border-[#c4c6d0] rounded-2xl p-4 sm:p-5 shadow-sm ${k.bg}`}>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-[11px] font-bold text-[#44474f] uppercase tracking-wider leading-tight">{k.label}</p>
-                  <span className={`material-symbols-outlined text-[20px] ${k.color}`}>{k.icon}</span>
+                  <span className={`material-symbols-outlined text-[20px] ${k.color} shrink-0`}>{k.icon}</span>
                 </div>
-                <p className={`text-[28px] font-extrabold ${k.color}`}>{k.value}</p>
+                <p className={`text-[24px] sm:text-[28px] font-extrabold ${k.color}`}>{k.value}</p>
               </div>
             ))}
           </div>
@@ -137,14 +137,14 @@ export default function DepartmentReport() {
           {/* Courses table */}
           {report.courses?.length > 0 && (
             <div className="bg-white border border-[#c4c6d0] rounded-2xl overflow-hidden shadow-sm">
-              <div className="px-6 py-4 border-b border-[#c4c6d0] bg-[#f6f3f2]">
-                <h3 className="text-[15px] font-bold text-[#03224d]">Courses in this Department</h3>
+              <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-[#c4c6d0] bg-[#f6f3f2]">
+                <h3 className="text-[14px] sm:text-[15px] font-bold text-[#03224d]">Courses in this Department</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-[13px]">
                   <thead>
                     <tr className="text-[11px] font-bold text-[#44474f] uppercase tracking-wider border-b border-[#c4c6d0]/50">
-                      <th className="text-left px-5 py-3">Course</th>
+                      <th className="text-left px-4 sm:px-5 py-3">Course</th>
                       <th className="text-left px-4 py-3 hidden sm:table-cell">Lecturer</th>
                       <th className="text-center px-4 py-3">Students</th>
                       <th className="text-center px-4 py-3">Status</th>
@@ -153,12 +153,12 @@ export default function DepartmentReport() {
                   <tbody className="divide-y divide-[#c4c6d0]/30">
                     {report.courses.map(c => (
                       <tr key={c._id} className="hover:bg-[#fbf9f8]">
-                        <td className="px-5 py-3">
-                          <p className="font-bold text-[#03224d]">{c.title}</p>
+                        <td className="px-4 sm:px-5 py-3">
+                          <p className="font-bold text-[#03224d] text-[13px] sm:text-[14px]">{c.title}</p>
                           <p className="text-[11px] text-[#747780]">{c.code}</p>
                         </td>
-                        <td className="px-4 py-3 hidden sm:table-cell text-[#44474f]">{c.lecturerId?.fullName ?? '—'}</td>
-                        <td className="px-4 py-3 text-center font-bold text-[#03224d]">{c.enrollmentCount ?? 0}</td>
+                        <td className="px-4 py-3 hidden sm:table-cell text-[#44474f] text-[13px]">{c.lecturerId?.fullName ?? '—'}</td>
+                        <td className="px-4 py-3 text-center font-bold text-[#03224d] text-[13px]">{c.enrollmentCount ?? 0}</td>
                         <td className="px-4 py-3 text-center">
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${c.status === 'active' ? 'bg-[#a0f3d4] text-[#00513e]' : c.status === 'archived' ? 'bg-[#f0eded] text-[#747780]' : 'bg-[#ffe8b5] text-[#5a3b00]'}`}>
                             {c.status}
