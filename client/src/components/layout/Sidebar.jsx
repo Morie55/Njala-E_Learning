@@ -11,6 +11,7 @@ const NAV = {
     { icon: 'school', label: 'My Courses', path: '/courses' },
     { icon: 'assignment', label: 'Assignments', path: '/assignments' },
     { icon: 'grade', label: 'Grades', path: '/grades' },
+    { icon: 'event_available', label: 'Attendance', path: '/attendance' },
     { icon: 'person', label: 'Profile', path: '/profile' },
   ],
   lecturer: [
@@ -30,6 +31,7 @@ const NAV = {
     { icon: 'account_balance', label: 'Schools', path: '/schools' },
     { icon: 'business', label: 'Departments', path: '/departments' },
     { icon: 'bar_chart', label: 'Analytics', path: '/analytics' },
+    { icon: 'manage_search', label: 'Audit Logs', path: '/audit-logs' },
     { icon: 'settings', label: 'Settings', path: '/settings' },
   ],
 }

@@ -9,6 +9,9 @@ import Submission from '../models/Submission.js'
 import Enrollment from '../models/Enrollment.js'
 import Department from '../models/Department.js'
 import School from '../models/School.js'
+import Assignment from '../models/Assignment.js'
+import AuditLog from '../models/AuditLog.js'
+import Settings from '../models/Settings.js'
 import { logAudit } from '../utils/auditLogger.js'
 
 const router = Router()
@@ -227,6 +230,139 @@ router.post('/users/bulk-import', ...auth, adminOnly, async (req, res, next) => 
   })
 
   res.status(201).json({ results })
+})
+
+
+/** GET /api/v1/admin/settings — Get all platform settings */
+router.get('/settings', ...auth, adminOnly, async (req, res, next) => {
+  try {
+    const docs = await Settings.find({}).lean()
+    // Convert array to key-value map
+    const settings = {}
+    docs.forEach(d => { settings[d.key] = d.value })
+    // Apply defaults for any missing keys
+    const defaults = {
+      universityName: 'Njala University',
+      academicYear: '2025/2026',
+      uploadLimitMb: 50,
+      allowSelfEnrollment: true,
+      requireDeptHeadApproval: false,
+      passingGradePercent: 40,
+      attendanceThreshold: 75,
+      itSupportEmail: 'kmorie18c@njala.edu.sl',
+    }
+    res.json({ settings: { ...defaults, ...settings } })
+  } catch (err) { next(err) }
+})
+
+/** PATCH /api/v1/admin/settings — Upsert platform settings */
+router.patch('/settings', ...auth, adminOnly, async (req, res, next) => {
+  try {
+    const updates = req.body // { key: value, ... }
+    if (typeof updates !== 'object' || Array.isArray(updates)) {
+      return res.status(400).json({ error: 'Body must be an object of { key: value } pairs' })
+    }
+    const ops = Object.entries(updates).map(([key, value]) =>
+      Settings.findOneAndUpdate(
+        { key },
+        { key, value },
+        { upsert: true, returnDocument: 'after' }
+      )
+    )
+    await Promise.all(ops)
+    await logAudit({ req, action: 'UPDATE_SETTINGS', targetModel: 'Settings', details: `Updated ${Object.keys(updates).join(', ')}` })
+    res.json({ message: 'Settings saved successfully' })
+  } catch (err) { next(err) }
+})
+
+/** GET /api/v1/admin/audit-logs — Paginated audit log viewer */
+router.get('/audit-logs', ...auth, adminOnly, async (req, res, next) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1)
+    const limit = Math.min(100, parseInt(req.query.limit) || 25)
+    const skip = (page - 1) * limit
+
+    const filter = {}
+    if (req.query.action) filter.action = req.query.action
+    if (req.query.from || req.query.to) {
+      filter.createdAt = {}
+      if (req.query.from) filter.createdAt.$gte = new Date(req.query.from)
+      if (req.query.to) filter.createdAt.$lte = new Date(req.query.to)
+    }
+
+    const [logs, total] = await Promise.all([
+      AuditLog.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('actorId', 'fullName email role')
+        .lean(),
+      AuditLog.countDocuments(filter),
+    ])
+
+    const enriched = logs.map(l => ({
+      ...l,
+      actorName: l.actorId?.fullName ?? l.actorClerkId ?? 'System',
+      actorEmail: l.actorId?.email ?? '',
+      actorRole: l.actorId?.role ?? '',
+    }))
+
+    res.json({
+      logs: enriched,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    })
+  } catch (err) { next(err) }
+})
+
+/** GET /api/v1/admin/report/course/:id — Per-course report for lecturer/admin */
+router.get('/report/course/:id', ...auth, async (req, res, next) => {
+  const { role, _id } = req.dbUser
+  if (!['lecturer', 'dept_head', 'admin'].includes(role)) return res.status(403).json({ error: 'Forbidden' })
+  try {
+    const course = await Course.findById(req.params.id).populate('lecturerId', 'fullName email').lean()
+    if (!course) return res.status(404).json({ error: 'Course not found' })
+    if (role === 'lecturer' && course.lecturerId?._id?.toString() !== _id.toString()) {
+      return res.status(403).json({ error: 'You do not own this course' })
+    }
+
+    const [enrollmentCount, assignments, submissions] = await Promise.all([
+      Enrollment.countDocuments({ courseId: course._id, status: 'active' }),
+      Assignment.find({ courseId: course._id }).lean(),
+      Submission.find({
+        assignmentId: { $in: await Assignment.find({ courseId: course._id }).distinct('_id') }
+      }).lean(),
+    ])
+
+    const gradedSubmissions = submissions.filter(s => s.score !== null && s.score !== undefined)
+    const avgScore = gradedSubmissions.length > 0
+      ? Math.round(gradedSubmissions.reduce((sum, s) => sum + s.score, 0) / gradedSubmissions.length)
+      : null
+    const submissionRate = assignments.length > 0 && enrollmentCount > 0
+      ? Math.round((submissions.length / (assignments.length * enrollmentCount)) * 100)
+      : 0
+    const lateCount = submissions.filter(s => s.isLate).length
+
+    // Grade distribution
+    const { calculateGrade } = await import('../utils/grading.js')
+    const gradeDist = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 }
+    gradedSubmissions.forEach(s => {
+      const g = calculateGrade(s.score, assignments.find(a => a._id.toString() === s.assignmentId.toString())?.maxScore || 100)
+      if (gradeDist[g.letterGrade] !== undefined) gradeDist[g.letterGrade]++
+    })
+
+    res.json({
+      course,
+      enrollmentCount,
+      assignmentCount: assignments.length,
+      submissionCount: submissions.length,
+      gradedCount: gradedSubmissions.length,
+      pendingGradingCount: submissions.length - gradedSubmissions.length,
+      avgScore,
+      submissionRate,
+      lateSubmissions: lateCount,
+      gradeDist,
+    })
+  } catch (err) { next(err) }
 })
 
 export default router

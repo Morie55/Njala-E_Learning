@@ -235,4 +235,96 @@ router.patch('/:id/grade', ...auth, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+/** GET /api/v1/submissions/gpa — Student cumulative and semester GPA */
+router.get('/gpa', ...auth, async (req, res, next) => {
+  if (req.dbUser.role !== 'student') return res.status(403).json({ error: 'Students only' })
+  try {
+    const { _id } = req.dbUser
+
+    const subs = await Submission.find({ studentId: _id, score: { $ne: null } })
+      .populate({
+        path: 'assignmentId',
+        select: 'maxScore courseId',
+        populate: { path: 'courseId', select: 'title code semester creditHours' },
+      })
+      .lean()
+
+    // Group by course
+    const courseMap = {}
+    for (const s of subs) {
+      const course = s.assignmentId?.courseId
+      if (!course) continue
+      const cid = course._id.toString()
+      if (!courseMap[cid]) {
+        courseMap[cid] = {
+          course,
+          creditHours: course.creditHours || 3,
+          scores: [],
+          maxScores: [],
+        }
+      }
+      courseMap[cid].scores.push(s.score)
+      courseMap[cid].maxScores.push(s.assignmentId.maxScore || 100)
+    }
+
+    // Calculate per-course grade point using Njala scale
+    const courseGrades = Object.values(courseMap).map(c => {
+      const totalScore = c.scores.reduce((a, b) => a + b, 0)
+      const totalMax = c.maxScores.reduce((a, b) => a + b, 0)
+      const pct = totalMax > 0 ? (totalScore / totalMax) * 100 : 0
+      const g = calculateGrade(totalScore, totalMax)
+      return {
+        course: c.course,
+        creditHours: c.creditHours,
+        percentage: Math.round(pct),
+        letterGrade: g.letterGrade,
+        gradePoint: g.gradePoint,
+        classification: g.classification,
+        qualityPoints: g.gradePoint * c.creditHours,
+      }
+    })
+
+    // Group by semester for semester GPA
+    const semesterMap = {}
+    for (const cg of courseGrades) {
+      const sem = cg.course.semester || 'Unknown'
+      if (!semesterMap[sem]) semesterMap[sem] = []
+      semesterMap[sem].push(cg)
+    }
+
+    const semesters = Object.entries(semesterMap).map(([semester, courses]) => {
+      const totalCH = courses.reduce((a, c) => a + c.creditHours, 0)
+      const totalQP = courses.reduce((a, c) => a + c.qualityPoints, 0)
+      return {
+        semester,
+        courses,
+        totalCreditHours: totalCH,
+        gpa: totalCH > 0 ? Math.round((totalQP / totalCH) * 100) / 100 : 0,
+      }
+    })
+
+    // Cumulative GPA across all semesters
+    const totalCH = courseGrades.reduce((a, c) => a + c.creditHours, 0)
+    const totalQP = courseGrades.reduce((a, c) => a + c.qualityPoints, 0)
+    const cumulativeGpa = totalCH > 0 ? Math.round((totalQP / totalCH) * 100) / 100 : 0
+
+    // Classification based on cumulative GPA (Njala 5-point scale)
+    let cumulativeClass = 'No Grade Yet'
+    if (cumulativeGpa >= 4.5) cumulativeClass = 'First Class Honours'
+    else if (cumulativeGpa >= 3.5) cumulativeClass = 'Second Class Upper'
+    else if (cumulativeGpa >= 2.5) cumulativeClass = 'Second Class Lower'
+    else if (cumulativeGpa >= 1.5) cumulativeClass = 'Third Class'
+    else if (cumulativeGpa >= 1.0) cumulativeClass = 'Pass'
+    else if (totalCH > 0) cumulativeClass = 'Fail'
+
+    res.json({
+      cumulativeGpa,
+      cumulativeClass,
+      totalCreditHours: totalCH,
+      semesters,
+      courseGrades,
+    })
+  } catch (err) { next(err) }
+})
+
 export default router

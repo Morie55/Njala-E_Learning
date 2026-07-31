@@ -154,6 +154,18 @@ export default function CourseManagement() {
                 >
                   Material
                 </button>
+                <button
+                  onClick={() => navigate(`/courses/${row._id}/attendance`)}
+                  className="text-[12px] font-bold text-[#1a4fd8] hover:underline cursor-pointer"
+                >
+                  Attendance
+                </button>
+                <button
+                  onClick={() => navigate(`/courses/${row._id}/report`)}
+                  className="text-[12px] font-bold text-[#dd9235] hover:underline cursor-pointer"
+                >
+                  Report
+                </button>
                 <button onClick={() => openEdit(row)} className="p-1 text-[#44474f] hover:text-[#03224d] cursor-pointer">
                   <span className="material-symbols-outlined text-[18px]">edit</span>
                 </button>

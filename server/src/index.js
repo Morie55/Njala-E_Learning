@@ -17,9 +17,11 @@ import schoolRoutes from './routes/schools.js'
 import departmentRoutes from './routes/departments.js'
 import adminRoutes from './routes/admin.js'
 import notificationRoutes from './routes/notifications.js'
+import attendanceRoutes from './routes/attendance.js'
 
 // Middleware & Script imports
 import { enforceStatus } from './middleware/enforceStatus.js'
+import { globalRateLimiter } from './middleware/rateLimiter.js'
 import { startLifecycleSweep } from './scripts/lifecycleSweep.js'
 import { startKeepAlive } from './scripts/keepAlive.js'
 
@@ -50,6 +52,9 @@ app.use(
 app.use(express.json({ limit: '5mb' }))
 app.use(express.urlencoded({ extended: true }))
 
+// Global rate limiting — applies to all API routes
+app.use('/api/v1', globalRateLimiter)
+
 // API routes
 // NOTE: enforceStatus is applied per-route AFTER populateUser runs (inside each route file's auth chain)
 app.use('/api/v1/auth', authRoutes)
@@ -64,6 +69,7 @@ app.use('/api/v1/schools', schoolRoutes)
 app.use('/api/v1/departments', departmentRoutes)
 app.use('/api/v1/admin', adminRoutes)
 app.use('/api/v1/notifications', notificationRoutes)
+app.use('/api/v1/attendance', attendanceRoutes)
 
 // Health check
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }))

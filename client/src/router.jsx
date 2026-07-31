@@ -45,6 +45,12 @@ import SchoolManagement from './pages/admin/SchoolManagement'
 import DepartmentManagement from './pages/admin/DepartmentManagement'
 import SystemSettings from './pages/admin/SystemSettings'
 import Analytics from './pages/admin/Analytics'
+import AuditLogs from './pages/admin/AuditLogs'
+
+// New pages
+import AttendanceTracker from './pages/lecturer/AttendanceTracker'
+import StudentAttendance from './pages/student/Attendance'
+import CourseReport from './pages/lecturer/CourseReport'
 
 /** Requires Clerk sign-in. Redirects to /sign-in if not authenticated. */
 function RequireAuth({ children }) {
@@ -157,6 +163,7 @@ const router = createBrowserRouter([
       },
       { path: 'grades',        element: <RequireRole allowedRoles={['student']}><Grades /></RequireRole> },
       { path: 'profile',       element: <RequireRole allowedRoles={['student']}><Profile /></RequireRole> },
+      { path: 'attendance',    element: <RequireRole allowedRoles={['student']}><StudentAttendance /></RequireRole> },
 
       // ── Lecturer ──
       { path: 'courses/:id/students',                 element: <RequireRole allowedRoles={['lecturer','dept_head','admin']}><EnrolledStudents /></RequireRole> },
@@ -165,6 +172,8 @@ const router = createBrowserRouter([
       { path: 'assignments/:id/submissions',          element: <RequireRole allowedRoles={['lecturer','dept_head','admin']}><GradeSubmissions /></RequireRole> },
       { path: 'courses/:id/materials/upload',         element: <RequireRole allowedRoles={['lecturer','dept_head','admin']}><UploadMaterial /></RequireRole> },
       { path: 'announcements/new',                    element: <RequireRole allowedRoles={['lecturer','dept_head','admin']}><PostAnnouncement /></RequireRole> },
+      { path: 'courses/:courseId/attendance',         element: <RequireRole allowedRoles={['lecturer','dept_head','admin']}><AttendanceTracker /></RequireRole> },
+      { path: 'courses/:id/report',                   element: <RequireRole allowedRoles={['lecturer','dept_head','admin']}><CourseReport /></RequireRole> },
 
       // ── Dept Head ──
       { path: 'oversight', element: <RequireRole allowedRoles={['dept_head','admin']}><CourseOversight /></RequireRole> },
@@ -175,6 +184,7 @@ const router = createBrowserRouter([
       { path: 'schools',            element: <RequireRole allowedRoles={['admin']}><SchoolManagement /></RequireRole> },
       { path: 'departments',        element: <RequireRole allowedRoles={['admin']}><DepartmentManagement /></RequireRole> },
       { path: 'analytics',          element: <RequireRole allowedRoles={['admin']}><Analytics /></RequireRole> },
+      { path: 'audit-logs',         element: <RequireRole allowedRoles={['admin']}><AuditLogs /></RequireRole> },
     ],
   },
 ])

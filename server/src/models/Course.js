@@ -8,6 +8,8 @@ const courseSchema = new mongoose.Schema(
     semester: { type: String, default: '' },
     status: { type: String, enum: ['draft', 'active', 'archived'], default: 'draft' },
     credits: { type: Number, default: 3 },
+    creditHours: { type: Number, default: 3, min: 1, max: 12 },
+    maxEnrollment: { type: Number, default: null }, // null = unlimited
     thumbnailUrl: { type: String, default: '' },
     lecturerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', default: null },

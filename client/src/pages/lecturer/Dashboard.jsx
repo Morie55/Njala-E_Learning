@@ -40,9 +40,15 @@ export default function LecturerDashboard() {
           </p>
         </div>
         <div className="flex gap-3">
-          <button className="px-4 py-2 bg-[#f0eded] border border-[#747780] text-[#03224d] text-[14px] font-medium rounded hover:bg-[#eae8e7] transition-all">
-            Generate Report
-          </button>
+          {courses[0] && (
+            <button
+              onClick={() => navigate(`/courses/${courses[0]._id}/report`)}
+              className="px-4 py-2 bg-[#f0eded] border border-[#747780] text-[#03224d] text-[14px] font-medium rounded hover:bg-[#eae8e7] transition-all flex items-center gap-2"
+            >
+              <span className="material-symbols-outlined text-[18px]">analytics</span>
+              Generate Report
+            </button>
+          )}
           <Link to="/courses" className="px-4 py-2 bg-[#03224d] text-white text-[14px] font-medium rounded hover:opacity-90 transition-opacity flex items-center gap-2">
             <span className="material-symbols-outlined text-[18px]">add</span>
             New Course
