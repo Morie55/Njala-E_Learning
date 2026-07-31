@@ -1,13 +1,14 @@
 import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.js'
 import { populateUser } from '../middleware/populateUser.js'
+import { enforceStatus } from '../middleware/enforceStatus.js'
 import School from '../models/School.js'
 import User from '../models/User.js'
 import Course from '../models/Course.js'
 import Department from '../models/Department.js'
 
 const router = Router()
-const auth = [requireAuth, populateUser]
+const auth = [requireAuth, populateUser, enforceStatus]
 
 /** GET /api/v1/schools */
 router.get('/', ...auth, async (req, res, next) => {

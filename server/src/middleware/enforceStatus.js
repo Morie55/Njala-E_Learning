@@ -35,8 +35,7 @@ export function enforceStatus(req, res, next) {
   if (
     status === 'ALUMNI' &&
     alumniSince &&
-    (fullPath.match(/^\/api\/v1\/(courses\/.+\/(materials|assignments)|assignments)/) ||
-      req.path.match(/^\/courses\/.+\/(materials|assignments)/))
+    fullPath.match(/^\/api\/v1\/(courses\/.+\/(materials|assignments)|assignments)/)
   ) {
     const oneYearPassed = Date.now() - new Date(alumniSince).getTime() > ONE_YEAR_MS
     if (oneYearPassed) {

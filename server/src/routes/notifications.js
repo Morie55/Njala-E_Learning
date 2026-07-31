@@ -4,6 +4,18 @@ import { requireAuth } from '../middleware/auth.js'
 
 const router = express.Router()
 
+// PATCH /api/notifications/read-all — Mark all notifications for user as read
+// NOTE: Must be registered BEFORE /:id/read to avoid Express matching 'read-all' as an :id param
+router.patch('/read-all', requireAuth, async (req, res) => {
+  try {
+    const userId = req.auth.userId
+    await Notification.updateMany({ recipientId: userId, read: false }, { read: true })
+    res.json({ message: 'All notifications marked as read' })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // GET /api/notifications — Fetch user's notifications and unread count
 router.get('/', requireAuth, async (req, res) => {
   try {
@@ -38,17 +50,6 @@ router.patch('/:id/read', requireAuth, async (req, res) => {
     }
 
     res.json({ notification })
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-})
-
-// PATCH /api/notifications/read-all — Mark all notifications for user as read
-router.patch('/read-all', requireAuth, async (req, res) => {
-  try {
-    const userId = req.auth.userId
-    await Notification.updateMany({ recipientId: userId, read: false }, { read: true })
-    res.json({ message: 'All notifications marked as read' })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

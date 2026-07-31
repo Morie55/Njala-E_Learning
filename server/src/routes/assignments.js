@@ -1,11 +1,13 @@
 import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.js'
 import { populateUser } from '../middleware/populateUser.js'
+import { enforceStatus } from '../middleware/enforceStatus.js'
 import Assignment from '../models/Assignment.js'
 import Enrollment from '../models/Enrollment.js'
+import Submission from '../models/Submission.js'
 
 const router = Router()
-const auth = [requireAuth, populateUser]
+const auth = [requireAuth, populateUser, enforceStatus]
 
 /** GET /api/v1/assignments – list all assignments for user (with submission status) */
 router.get('/', ...auth, async (req, res, next) => {
@@ -20,7 +22,6 @@ router.get('/', ...auth, async (req, res, next) => {
         .populate('courseId', 'code title')
         .lean()
 
-      const { default: Submission } = await import('../models/Submission.js')
       const submissions = await Submission.find({ studentId: _id, assignmentId: { $in: list.map(a => a._id) } }).lean()
 
       assignments = list.map(a => {
@@ -53,8 +54,9 @@ router.get('/', ...auth, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-/** GET /api/v1/assignments/upcoming  – upcoming assignments for enrolled courses */
+/** GET /api/v1/assignments/upcoming  – upcoming assignments for enrolled courses [student only] */
 router.get('/upcoming', ...auth, async (req, res, next) => {
+  if (req.dbUser.role !== 'student') return res.status(403).json({ error: 'Students only' })
   try {
     const limit = parseInt(req.query.limit) || 10
     const enrollments = await Enrollment.find({ studentId: req.dbUser._id, status: 'active' }).lean()
@@ -71,13 +73,12 @@ router.get('/:id/submissions', ...auth, async (req, res, next) => {
   const { role, _id } = req.dbUser
   if (!['lecturer', 'dept_head', 'admin'].includes(role)) return res.status(403).json({ error: 'Forbidden' })
   try {
-    const { default: Submission } = await import('../models/Submission.js')
-    const { default: Course } = await import('../models/Course.js')
     const assignment = await Assignment.findById(req.params.id).lean()
     if (!assignment) return res.status(404).json({ error: 'Assignment not found' })
 
     // Verify the requesting lecturer owns the course (dept_head and admin may bypass)
     if (role === 'lecturer') {
+      const { default: Course } = await import('../models/Course.js')
       const course = await Course.findById(assignment.courseId).lean()
       if (!course || course.lecturerId.toString() !== _id.toString()) {
         return res.status(403).json({ error: 'You do not own this course' })

@@ -235,7 +235,9 @@ router.patch('/:id/assignment', requireAuth, populateUser, async (req, res, next
  */
 router.delete('/:id', requireAuth, populateUser, async (req, res, next) => {
   if (req.dbUser.role !== 'admin') return res.status(403).json({ error: 'Admin only' })
-  const { hard, reason } = req.query
+  const { hard } = req.query
+  // Accept reason from body (preferred) or query param (fallback for compatibility)
+  const reason = req.body?.reason || req.query.reason
   try {
     const user = await User.findById(req.params.id)
     if (!user) return res.status(404).json({ error: 'User not found' })

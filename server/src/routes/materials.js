@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.js'
 import { populateUser } from '../middleware/populateUser.js'
+import { enforceStatus } from '../middleware/enforceStatus.js'
 import { upload } from '../lib/multer.js'
 import { uploadToCloudinary } from '../lib/cloudinary.js'
 import Material from '../models/Material.js'
@@ -8,7 +9,7 @@ import Course from '../models/Course.js'
 import multer from 'multer'
 
 const router = Router()
-const auth = [requireAuth, populateUser]
+const auth = [requireAuth, populateUser, enforceStatus]
 
 /** Custom middleware to handle Multer upload errors cleanly */
 function handleUploadMiddleware(req, res, next) {

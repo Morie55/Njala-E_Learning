@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.js'
 import { populateUser } from '../middleware/populateUser.js'
+import { enforceStatus } from '../middleware/enforceStatus.js'
 import Submission from '../models/Submission.js'
 import Assignment from '../models/Assignment.js'
 import Course from '../models/Course.js'
@@ -10,7 +11,7 @@ import { logAudit } from '../utils/auditLogger.js'
 import { calculateGrade } from '../utils/grading.js'
 
 const router = Router()
-const auth = [requireAuth, populateUser]
+const auth = [requireAuth, populateUser, enforceStatus]
 
 /** GET /api/v1/submissions/me  */
 router.get('/me', ...auth, async (req, res, next) => {

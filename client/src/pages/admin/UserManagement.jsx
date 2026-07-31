@@ -60,10 +60,19 @@ export default function UserManagement() {
     setNewRole(user.role)
     setNewIdNumber(user.idNumber || '')
     setNewStatus(user.status || 'ACTIVE')
-    setAssignedSchool(user.schoolId?._id || user.schoolId || '')
+    const schoolId = user.schoolId?._id || user.schoolId || ''
+    setAssignedSchool(schoolId)
     setAssignedDept(user.departmentId?._id || user.departmentId || '')
     setModal('edit')
     setRoleError('')
+    // Pre-fetch departments immediately if the user already has a school assigned
+    if (schoolId) {
+      api.get(`/departments?schoolId=${schoolId}`)
+        .then((r) => setDepartments(r.data?.departments ?? []))
+        .catch(() => setDepartments([]))
+    } else {
+      setDepartments([])
+    }
   }
 
   function openSuspendModal(user) {
@@ -130,8 +139,9 @@ export default function UserManagement() {
 
     setSaving(true)
     try {
-      const url = hardDelete ? `/users/${selected._id}?hard=true&reason=${encodeURIComponent(deleteReason)}` : `/users/${selected._id}`
-      await api.delete(url)
+      // BUG-24 fix: pass reason in body, not as a query param
+      const url = hardDelete ? `/users/${selected._id}?hard=true` : `/users/${selected._id}`
+      await api.delete(url, hardDelete ? { data: { reason: deleteReason } } : undefined)
       setModal(null)
       loadData()
     } catch (err) {

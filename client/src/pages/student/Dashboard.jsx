@@ -68,7 +68,7 @@ export default function StudentDashboard() {
             View Grades
           </Link>
           <Link
-            to="/courses"
+            to="/browse-courses"
             className="w-full sm:w-auto text-center justify-center bg-[#03224d] text-white px-4 py-2.5 sm:py-2 rounded text-[12px] font-bold tracking-wide hover:opacity-90 transition-opacity flex items-center gap-2 cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined text-sm">add</span>
@@ -141,7 +141,7 @@ export default function StudentDashboard() {
               </div>
             )}
             <Link
-              to="/courses"
+              to="/assignments"
               className="w-full mt-5 block text-center py-2 border border-[#03224d] text-[#03224d] text-[12px] font-bold rounded hover:bg-[#03224d]/5 transition-colors"
             >
               All Assignments
@@ -161,14 +161,13 @@ export default function StudentDashboard() {
                 {announcements.map((a) => (
                   <div key={a._id} className="border-b border-[#c4c6d0] pb-4 last:border-0 last:pb-0">
                     <div className="flex justify-between items-start mb-1">
-                      <h5 className="text-[13px] sm:text-[14px] font-bold text-[#1b1c1c] line-clamp-1">
-                        {a.message?.slice(0, 40)}…
-                      </h5>
-                      <span className="text-[11px] sm:text-[12px] text-[#44474f] shrink-0 ml-2">
-                        {Math.floor((Date.now() - new Date(a.postedAt)) / 3600000)}h ago
+                      <span className="text-[11px] sm:text-[12px] text-[#44474f] shrink-0">
+                        {a.createdAt
+                          ? `${Math.floor((Date.now() - new Date(a.createdAt)) / 3600000)}h ago`
+                          : 'Recent'}
                       </span>
                     </div>
-                    <p className="text-[13px] sm:text-[14px] text-[#44474f] line-clamp-2">{a.message}</p>
+                    <p className="text-[13px] sm:text-[14px] text-[#44474f] line-clamp-3">{a.message}</p>
                   </div>
                 ))}
               </div>

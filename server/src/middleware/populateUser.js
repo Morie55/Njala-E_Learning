@@ -9,16 +9,11 @@ export async function populateUser(req, res, next) {
   try {
     let user = await User.findOne({ clerkId: req.auth.userId }).lean()
     if (!user) {
-      const userCount = await User.countDocuments()
-      const initialRole = userCount === 0 ? 'admin' : 'student'
-      const newUser = await User.create({
-        clerkId: req.auth.userId,
-        email: `${req.auth.userId}@njala.edu.sl`,
-        fullName: 'User',
-        role: initialRole,
-        status: 'ACTIVE',
+      // Do NOT auto-create accounts for unknown Clerk IDs.
+      // The /users/sync endpoint is the single source of truth for account creation.
+      return res.status(401).json({
+        error: 'Account not registered. Please sign in via the portal to activate your account, or contact your administrator.',
       })
-      user = newUser.toObject()
     }
 
     // Auto-normalize status to uppercase Lifecycle status

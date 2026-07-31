@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.js'
 import { populateUser } from '../middleware/populateUser.js'
+import { enforceStatus } from '../middleware/enforceStatus.js'
 import Announcement from '../models/Announcement.js'
 import Enrollment from '../models/Enrollment.js'
 import Course from '../models/Course.js'
@@ -11,7 +12,7 @@ import { validateBody } from '../middleware/validate.js'
 import { createAnnouncementSchema } from '../utils/schemas.js'
 
 const router = Router()
-const auth = [requireAuth, populateUser]
+const auth = [requireAuth, populateUser, enforceStatus]
 
 /** GET /api/v1/announcements  – relevant to current user */
 router.get('/', ...auth, async (req, res, next) => {
@@ -27,10 +28,16 @@ router.get('/', ...auth, async (req, res, next) => {
       const enrollments = await Enrollment.find({ studentId: _id, status: 'active' }).lean()
       const courseIds = enrollments.map(e => e.courseId)
       query = { $or: [{ courseId: { $in: courseIds } }, { courseId: null }] }
+    } else if (role === 'lecturer') {
+      // Lecturers see only announcements from courses they own
+      const ownedCourses = await Course.find({ lecturerId: _id }).select('_id').lean()
+      const ownedIds = ownedCourses.map(c => c._id)
+      query = { courseId: { $in: ownedIds } }
     }
+    // dept_head and admin: query stays {} (sees all)
 
     const announcements = await Announcement.find(query)
-      .sort({ postedAt: -1 }).limit(limit)
+      .sort({ createdAt: -1 }).limit(limit)
       .populate('postedBy', 'fullName').lean()
 
     const enriched = announcements.map(a => ({ ...a, postedByName: a.postedBy?.fullName }))

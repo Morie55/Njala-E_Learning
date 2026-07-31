@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.js'
 import { populateUser } from '../middleware/populateUser.js'
+import { enforceStatus } from '../middleware/enforceStatus.js'
 import { validateBody } from '../middleware/validate.js'
 import { createCourseSchema, createAssignmentSchema } from '../utils/schemas.js'
 import Course from '../models/Course.js'
@@ -17,7 +18,7 @@ function csvSafe(value) {
 }
 
 const router = Router()
-const auth = [requireAuth, populateUser]
+const auth = [requireAuth, populateUser, enforceStatus]
 
 /**
  * GET /api/v1/courses
@@ -182,8 +183,6 @@ router.get('/:id/students', ...auth, async (req, res, next) => {
     }
 
     const enrollments = await Enrollment.find({ courseId: req.params.id }).populate('studentId', 'fullName email').lean()
-    const { default: Submission } = await import('../models/Submission.js')
-    const { default: Assignment } = await import('../models/Assignment.js')
     const courseAssignments = await Assignment.find({ courseId: req.params.id }).select('_id').lean()
     const assignmentIds = courseAssignments.map(a => a._id)
     const students = await Promise.all(enrollments.map(async e => {

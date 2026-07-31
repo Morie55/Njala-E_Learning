@@ -137,7 +137,7 @@ const router = createBrowserRouter([
   { path: '/activate', element: <RequireAuth><ActivateAccount /></RequireAuth> },
 
   {
-    path: '/',
+    path: '/*',
     element: <RequireAuth><Outlet /></RequireAuth>,
     errorElement: <RootErrorBoundary />,
     children: [

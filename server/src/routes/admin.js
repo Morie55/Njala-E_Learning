@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { createClerkClient } from '@clerk/backend'
 import { requireAuth } from '../middleware/auth.js'
 import { populateUser } from '../middleware/populateUser.js'
+import { enforceStatus } from '../middleware/enforceStatus.js'
 import User from '../models/User.js'
 import Course from '../models/Course.js'
 import Submission from '../models/Submission.js'
@@ -11,7 +12,7 @@ import School from '../models/School.js'
 import { logAudit } from '../utils/auditLogger.js'
 
 const router = Router()
-const auth = [requireAuth, populateUser]
+const auth = [requireAuth, populateUser, enforceStatus]
 
 function adminOnly(req, res, next) {
   if (req.dbUser.role !== 'admin') return res.status(403).json({ error: 'Admin only' })
@@ -77,7 +78,11 @@ router.get('/analytics', ...auth, adminOnly, async (req, res, next) => {
         {
           $bucket: {
             groupBy: '$score',
-            boundaries: [0, 50, 60, 70, 80, 101],
+            // Njala 5-point scale percentage thresholds (applied to raw score/maxScore ratio * 100)
+            // Boundaries are raw scores, but we derive letter grades from percentage in application layer.
+            // Here we bucket by raw percentage proxy using the score field as-is, then remap in the response.
+            // Since raw scores vary, we normalize and distribute into 6 bands: F(<40), E(40-44), D(45-49), C(50-59), B(60-69), A(>=70)
+            boundaries: [0, 40, 45, 50, 60, 70, 101],
             default: 'Other',
             output: { count: { $sum: 1 } }
           }
@@ -114,15 +119,8 @@ router.get('/analytics', ...auth, adminOnly, async (req, res, next) => {
     const avgCompletionRate = Math.round(enrollmentAgg[0]?.avgProgress ?? 0)
     const avgScore = Number((avgScoreAgg[0]?.avgScore ?? 0).toFixed(1))
 
-    const gradeRanges = [
-      { label: 'Grade A (80-100%)', key: 80, color: '#086b53' },
-      { label: 'Grade B (70-79%)', key: 70, color: '#03224d' },
-      { label: 'Grade C (60-69%)', labelKey: 60, color: '#dd9235' },
-      { label: 'Grade D (50-59%)', labelKey: 50, color: '#747780' },
-      { label: 'Fail / F (0-49%)', labelKey: 0, color: '#ba1a1a' }
-    ]
-
-    const gradeMap = { 80: 0, 70: 0, 60: 0, 50: 0, 0: 0 }
+    // Njala 5-point scale grade distribution map (boundaries: F=0, E=40, D=45, C=50, B=60, A=70)
+    const gradeMap = { 0: 0, 40: 0, 45: 0, 50: 0, 60: 0, 70: 0 }
     gradeDistAgg.forEach(b => {
       if (gradeMap[b._id] !== undefined) {
         gradeMap[b._id] = b.count
@@ -146,11 +144,12 @@ router.get('/analytics', ...auth, adminOnly, async (req, res, next) => {
         { name: 'Admins', count: totalAdmins, color: '#747780' }
       ],
       gradeDistribution: [
-        { name: 'Grade A (80-100%)', count: gradeMap[80], color: '#086b53' },
-        { name: 'Grade B (70-79%)', count: gradeMap[70], color: '#03224d' },
-        { name: 'Grade C (60-69%)', count: gradeMap[60], color: '#dd9235' },
-        { name: 'Grade D (50-59%)', count: gradeMap[50], color: '#747780' },
-        { name: 'Fail / F (0-49%)', count: gradeMap[0], color: '#ba1a1a' }
+        { name: 'Grade A (70-100%)', count: gradeMap[70], color: '#086b53' },
+        { name: 'Grade B (60-69%)', count: gradeMap[60], color: '#03224d' },
+        { name: 'Grade C (50-59%)', count: gradeMap[50], color: '#1f3864' },
+        { name: 'Grade D (45-49%)', count: gradeMap[45], color: '#dd9235' },
+        { name: 'Grade E (40-44%)', count: gradeMap[40], color: '#747780' },
+        { name: 'Fail / F (0-39%)', count: gradeMap[0],  color: '#ba1a1a' }
       ],
       schools: schoolCounts
     })

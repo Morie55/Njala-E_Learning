@@ -89,7 +89,7 @@ export default function Analytics() {
       )}
 
       {loading ? (
-        <LoadingSkeleton type="cards" count={4} />
+        <LoadingSkeleton type="stat" count={4} />
       ) : (
         <>
           {/* KPI Tiles */}

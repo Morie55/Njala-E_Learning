@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.js'
 import { populateUser } from '../middleware/populateUser.js'
+import { enforceStatus } from '../middleware/enforceStatus.js'
 import { upload } from '../lib/multer.js'
 import { uploadToCloudinary } from '../lib/cloudinary.js'
 import Submission from '../models/Submission.js'
@@ -10,7 +11,7 @@ import Enrollment from '../models/Enrollment.js'
 import { uploadRateLimiter } from '../middleware/rateLimiter.js'
 
 const router = Router()
-const auth = [requireAuth, populateUser]
+const auth = [requireAuth, populateUser, enforceStatus]
 
 /** POST /api/v1/assignments/:id/submissions  [student] – submit assignment */
 router.post('/:id/submissions', ...auth, uploadRateLimiter, upload.single('file'), async (req, res, next) => {
@@ -40,9 +41,14 @@ router.post('/:id/submissions', ...auth, uploadRateLimiter, upload.single('file'
       }
     }
 
+    // Upsert: only set score/feedback/gradedBy/gradedAt on INSERT (first submission).
+    // On resubmit, preserve any existing grade the lecturer already entered.
     const submission = await Submission.findOneAndUpdate(
       { assignmentId: req.params.id, studentId: req.dbUser._id },
-      { fileUrl, submittedAt: now, score: null, feedback: '', isLate, daysLate },
+      {
+        $set: { fileUrl, submittedAt: now, isLate, daysLate },
+        $setOnInsert: { score: null, feedback: '', gradedBy: null, gradedAt: null },
+      },
       { upsert: true, returnDocument: 'after' }
     )
     res.status(201).json(submission)

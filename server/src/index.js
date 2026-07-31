@@ -35,13 +35,14 @@ const allowedOrigins = Array.from(new Set([...rawOrigins, 'http://localhost:5173
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
-        return callback(null, true)
-      }
-      if (origin.endsWith('.vercel.app')) {
-        return callback(null, true)
-      }
-      callback(null, true)
+      // Allow same-origin / non-browser requests
+      if (!origin) return callback(null, true)
+      // Allow explicitly listed origins
+      if (allowedOrigins.includes(origin)) return callback(null, true)
+      // Allow any Vercel preview deployment
+      if (origin.endsWith('.vercel.app')) return callback(null, true)
+      // Reject all other origins
+      return callback(new Error(`CORS: origin '${origin}' is not allowed`))
     },
     credentials: true,
   })
@@ -49,19 +50,20 @@ app.use(
 app.use(express.json({ limit: '5mb' }))
 app.use(express.urlencoded({ extended: true }))
 
-// API routes (with enforceStatus status enforcement)
+// API routes
+// NOTE: enforceStatus is applied per-route AFTER populateUser runs (inside each route file's auth chain)
 app.use('/api/v1/auth', authRoutes)
-app.use('/api/v1/users', enforceStatus, userRoutes)
-app.use('/api/v1/courses', enforceStatus, courseRoutes)
-app.use('/api/v1/assignments', enforceStatus, assignmentRoutes)
-app.use('/api/v1/assignments', enforceStatus, assignmentSubmitRoutes)
-app.use('/api/v1/submissions', enforceStatus, submissionRoutes)
-app.use('/api/v1/materials', enforceStatus, materialRoutes)
-app.use('/api/v1/announcements', enforceStatus, announcementRoutes)
-app.use('/api/v1/schools', enforceStatus, schoolRoutes)
-app.use('/api/v1/departments', enforceStatus, departmentRoutes)
-app.use('/api/v1/admin', enforceStatus, adminRoutes)
-app.use('/api/v1/notifications', enforceStatus, notificationRoutes)
+app.use('/api/v1/users', userRoutes)
+app.use('/api/v1/courses', courseRoutes)
+app.use('/api/v1/assignments', assignmentRoutes)
+app.use('/api/v1/assignments', assignmentSubmitRoutes)
+app.use('/api/v1/submissions', submissionRoutes)
+app.use('/api/v1/materials', materialRoutes)
+app.use('/api/v1/announcements', announcementRoutes)
+app.use('/api/v1/schools', schoolRoutes)
+app.use('/api/v1/departments', departmentRoutes)
+app.use('/api/v1/admin', adminRoutes)
+app.use('/api/v1/notifications', notificationRoutes)
 
 // Health check
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }))

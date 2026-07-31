@@ -13,11 +13,11 @@ export default function AssignmentSubmission() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    api.get(`/courses/${courseId}/assignments`).then(r => {
+    api.get(`/assignments`).then(r => {
       const found = (r.data?.assignments ?? []).find(a => a._id === id)
       setAssignment(found ?? null)
     }).catch(() => {})
-  }, [courseId, id])
+  }, [id])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -30,7 +30,7 @@ export default function AssignmentSubmission() {
       await api.post(`/assignments/${id}/submissions`, form, { headers: { 'Content-Type': 'multipart/form-data' } })
       setSubmitted(true)
     } catch (err) {
-      setError(err.message)
+      setError(err.response?.data?.error ?? err.message ?? 'Submission failed. Please try again.')
     } finally {
       setSubmitting(false)
     }

@@ -5,10 +5,10 @@ import api from '../../lib/api'
 import { calculateGrade } from '../../utils/grading'
 
 function ScoreChip({ score, maxScore }) {
-  const g = calculateGrade(score, maxScore)
   if (score === null || score === undefined) {
     return <span className="text-[12px] text-[#44474f] italic px-2.5 py-1 rounded bg-[#f0eded] border border-[#c4c6d0] inline-block">Pending</span>
   }
+  const g = calculateGrade(score, maxScore)
   return (
     <div className="flex flex-col gap-1 min-w-[140px]">
       <span className={`inline-flex items-center gap-1 text-[12px] font-bold px-2.5 py-1 rounded-full border ${g.badgeColor} w-fit`}>
