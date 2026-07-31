@@ -205,7 +205,32 @@ router.patch('/:id/grade', ...auth, async (req, res, next) => {
     const max = sub.assignmentId?.maxScore ?? Infinity
     const score = Number(req.body.score)
     if (isNaN(score) || score < 0 || score > max) return res.status(400).json({ error: `Score must be between 0 and ${max}` })
+
+    // ── Rubric scores ─────────────────────────────────────────────────────────
+    const rubricScores = req.body.rubricScores ?? []
+    if (rubricScores.length > 0) sub.rubricScores = rubricScores
+
+    // ── Late Penalty Calculation ──────────────────────────────────────────────
+    const assignment = sub.assignmentId
+    let penaltyDeducted = 0
+    let finalScore = score
+    if (sub.isLate && assignment?.latePenaltyType && assignment.latePenaltyType !== 'none') {
+      if (assignment.latePenaltyType === 'hard_cutoff') {
+        // Hard cutoff: 0 marks for late submission
+        penaltyDeducted = score
+        finalScore = 0
+      } else if (assignment.latePenaltyType === 'percent_per_day') {
+        const pctPerDay = assignment.latePenaltyPerDay ?? 5
+        const maxPct = assignment.maxPenaltyPct ?? 25
+        const rawPct = Math.min(pctPerDay * (sub.daysLate ?? 0), maxPct)
+        penaltyDeducted = Math.round((rawPct / 100) * max * 100) / 100
+        finalScore = Math.max(0, Math.round((score - penaltyDeducted) * 100) / 100)
+      }
+    }
+
     sub.score = score
+    sub.finalScore = finalScore
+    sub.penaltyDeducted = penaltyDeducted
     sub.feedback = req.body.feedback ?? ''
     sub.gradedBy = _id
     sub.gradedAt = new Date()
@@ -214,11 +239,12 @@ router.patch('/:id/grade', ...auth, async (req, res, next) => {
     // Populate student user to dispatch notification + email
     const student = await User.findById(sub.studentId).lean()
     if (student) {
+      const displayScore = finalScore !== score ? `${finalScore}/${max} (−${penaltyDeducted} late penalty)` : `${score}/${max}`
       await Notification.create({
         recipientId: student.clerkId || student._id.toString(),
         senderId: req.auth.userId,
         title: 'Assignment Graded',
-        message: `Your submission for "${sub.assignmentId?.title || 'Assignment'}" has been graded: ${score}/${max}`,
+        message: `Your submission for "${sub.assignmentId?.title || 'Assignment'}" has been graded: ${displayScore}`,
         type: 'grade',
         link: '/grades',
       })
@@ -229,7 +255,7 @@ router.patch('/:id/grade', ...auth, async (req, res, next) => {
           student.fullName,
           courseName,
           sub.assignmentId?.title ?? 'Assignment',
-          score,
+          finalScore,
           max,
           `${process.env.CLIENT_URL || 'http://localhost:5173'}/grades`
         )
@@ -242,7 +268,7 @@ router.patch('/:id/grade', ...auth, async (req, res, next) => {
       action: 'GRADE_SUBMISSION',
       targetModel: 'Submission',
       targetId: sub._id.toString(),
-      details: { score, maxScore: max, studentId: sub.studentId?.toString() },
+      details: { score, finalScore, penaltyDeducted, maxScore: max, studentId: sub.studentId?.toString() },
     })
 
     res.json(sub)

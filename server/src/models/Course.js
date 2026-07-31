@@ -7,6 +7,9 @@ const courseSchema = new mongoose.Schema(
     description: { type: String, default: '' },
     semester: { type: String, default: '' },
     status: { type: String, enum: ['draft', 'active', 'archived'], default: 'draft' },
+    approvalStatus: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'approved' },
+    rejectionReason: { type: String, default: '' },
+    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     credits: { type: Number, default: 3 },
     creditHours: { type: Number, default: 3, min: 1, max: 12 },
     maxEnrollment: { type: Number, default: null }, // null = unlimited
@@ -22,5 +25,6 @@ courseSchema.index({ lecturerId: 1 })
 courseSchema.index({ schoolId: 1 })
 courseSchema.index({ departmentId: 1 })
 courseSchema.index({ status: 1 })
+courseSchema.index({ approvalStatus: 1 })
 
 export default mongoose.models.Course || mongoose.model('Course', courseSchema)

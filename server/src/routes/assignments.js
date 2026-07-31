@@ -85,9 +85,30 @@ router.get('/:id/submissions', ...auth, async (req, res, next) => {
       }
     }
 
-    const submissions = await Submission.find({ assignmentId: req.params.id }).populate('studentId', 'fullName email').lean()
+    const totalSubmissions = await Submission.countDocuments({ assignmentId: req.params.id })
+    const page = req.query.page ? parseInt(req.query.page) : null
+    const limit = req.query.limit ? parseInt(req.query.limit) : null
+
+    let subQuery = Submission.find({ assignmentId: req.params.id })
+      .populate('studentId', 'fullName email')
+      .sort({ submittedAt: -1 })
+
+    if (page && limit) {
+      const skip = (page - 1) * limit
+      subQuery = subQuery.skip(skip).limit(limit)
+    }
+
+    const submissions = await subQuery.lean()
     const enriched = submissions.map(s => ({ ...s, studentName: s.studentId?.fullName, studentEmail: s.studentId?.email }))
-    res.json({ assignment, submissions: enriched })
+
+    res.json({
+      assignment,
+      submissions: enriched,
+      totalSubmissions,
+      page: page || 1,
+      limit: limit || totalSubmissions,
+      totalPages: limit ? Math.ceil(totalSubmissions / limit) : 1,
+    })
   } catch (err) { next(err) }
 })
 

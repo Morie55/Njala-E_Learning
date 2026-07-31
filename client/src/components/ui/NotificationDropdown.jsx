@@ -34,28 +34,36 @@ export default function NotificationDropdown({ onClose, onUpdateCount }) {
     return () => document.removeEventListener('mousedown', handler)
   }, [onClose])
 
-  const markRead = async (id, link) => {
-    try {
-      await api.patch(`/notifications/${id}/read`)
-      setNotifications((prev) =>
-        prev.map((n) => (n._id === id ? { ...n, read: true } : n))
-      )
-      fetchNotifications()
-      if (link) navigate(link)
-      onClose()
-    } catch (err) {
-      console.error(err)
-    }
+  const markRead = (id, link) => {
+    // ⚡ Optimistic Update: Immediately mark item as read locally
+    const previousState = [...notifications]
+    setNotifications((prev) =>
+      prev.map((n) => (n._id === id ? { ...n, read: true } : n))
+    )
+    const newUnread = previousState.filter((n) => (n._id === id ? false : !n.read)).length
+    onUpdateCount?.(newUnread)
+
+    if (link) navigate(link)
+    onClose()
+
+    // Fire background API call
+    api.patch(`/notifications/${id}/read`).catch((err) => {
+      console.error('[Optimistic UI Rollback] Failed to mark notification read:', err)
+      setNotifications(previousState)
+    })
   }
 
-  const markAllRead = async () => {
-    try {
-      await api.patch('/notifications/read-all')
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
-      onUpdateCount?.(0)
-    } catch (err) {
-      console.error(err)
-    }
+  const markAllRead = () => {
+    // ⚡ Optimistic Update: Immediately mark all read locally
+    const previousState = [...notifications]
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+    onUpdateCount?.(0)
+
+    // Fire background API call
+    api.patch('/notifications/read-all').catch((err) => {
+      console.error('[Optimistic UI Rollback] Failed to mark all read:', err)
+      setNotifications(previousState)
+    })
   }
 
   function timeAgo(date) {

@@ -4,7 +4,6 @@ import { useUser as useClerkUser } from '@clerk/clerk-react'
 import AppLayout from '../../components/layout/AppLayout'
 import CourseCard from '../../components/ui/CourseCard'
 import LoadingSkeleton from '../../components/ui/LoadingSkeleton'
-import EmptyState from '../../components/ui/EmptyState'
 import api from '../../lib/api'
 
 export default function StudentDashboard() {
@@ -12,6 +11,8 @@ export default function StudentDashboard() {
   const [courses, setCourses] = useState([])
   const [assignments, setAssignments] = useState([])
   const [announcements, setAnnouncements] = useState([])
+  const [activePeriod, setActivePeriod] = useState(null)
+  const [gpaData, setGpaData] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -19,21 +20,26 @@ export default function StudentDashboard() {
       api.get('/courses?enrolled=true'),
       api.get('/assignments/upcoming?limit=3'),
       api.get('/announcements?limit=2'),
+      api.get('/academic-periods/active'),
+      api.get('/submissions/gpa').catch(() => ({ data: null })),
     ])
-      .then(([c, a, ann]) => {
+      .then(([c, a, ann, p, g]) => {
         setCourses(c.data?.courses ?? [])
         setAssignments(a.data?.assignments ?? [])
         setAnnouncements(ann.data?.announcements ?? [])
+        setActivePeriod(p.data?.period ?? null)
+        setGpaData(g.data)
       })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 
   const firstName = user?.firstName ?? 'Student'
-  const dueCount = assignments.filter((a) => {
+  const dueAssignments = assignments.filter((a) => {
     const diff = (new Date(a.dueDate) - Date.now()) / (1000 * 3600 * 24)
     return diff >= 0 && diff <= 7
-  }).length
+  })
+  const dueCount = dueAssignments.length
 
   function formatDueDate(date) {
     return new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase().split(' ')
@@ -46,36 +52,106 @@ export default function StudentDashboard() {
     return { bg: 'bg-[#d8e2ff] text-[#001a41]', label: `${days}d remaining` }
   }
 
+  const cumulativeGpa = gpaData?.cumulativeGpa ?? null
+  const cumulativeClass = gpaData?.cumulativeClass ?? null
+
   return (
     <AppLayout role="student">
-      {/* Header */}
-      <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+      {/* Personalized Header */}
+      <div className="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl sm:text-[32px] font-semibold leading-tight text-[#03224d]">
-            Welcome back, {firstName}
+            Welcome back, {firstName}!
           </h2>
-          <p className="text-[13px] sm:text-[16px] leading-relaxed text-[#44474f] mt-1">
-            {dueCount > 0
-              ? `You have ${dueCount} assignment${dueCount > 1 ? 's' : ''} due this week. Stay focused!`
-              : "You're all caught up this week. Keep it up!"}
+          <p className="text-[13px] sm:text-[15px] leading-relaxed text-[#44474f] mt-1">
+            {cumulativeGpa && cumulativeGpa > 0 ? (
+              <span className="flex items-center gap-2">
+                <span>Academic Standing:</span>
+                <strong className="text-[#086b53] bg-[#a0f3d4] px-2.5 py-0.5 rounded-full text-[12px]">
+                  GPA {cumulativeGpa.toFixed(2)} ({cumulativeClass})
+                </strong>
+                <span>— Keep up the great work!</span>
+              </span>
+            ) : (
+              dueCount > 0
+                ? `You have ${dueCount} assignment${dueCount > 1 ? 's' : ''} due this week. Stay focused!`
+                : "You're all caught up this week. Keep it up!"
+            )}
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
-          <Link
-            to="/grades"
-            className="w-full sm:w-auto text-center justify-center bg-[#f0eded] border border-[#c4c6d0] text-[#1b1c1c] px-4 py-2.5 sm:py-2 rounded text-[12px] font-bold tracking-wide hover:bg-[#eae8e7] transition-colors cursor-pointer"
-          >
-            View Grades
-          </Link>
-          <Link
-            to="/browse-courses"
-            className="w-full sm:w-auto text-center justify-center bg-[#03224d] text-white px-4 py-2.5 sm:py-2 rounded text-[12px] font-bold tracking-wide hover:opacity-90 transition-opacity flex items-center gap-2 cursor-pointer shrink-0"
-          >
-            <span className="material-symbols-outlined text-sm">add</span>
-            Browse Courses
-          </Link>
+
+        <div className="flex items-center gap-3">
+          {activePeriod && (
+            <div className="bg-[#03224d] text-white px-4 py-2 rounded-xl flex items-center gap-3 shrink-0 shadow-xs">
+              <span className="material-symbols-outlined text-[#a0f3d4] text-[20px]">date_range</span>
+              <div>
+                <p className="text-[10px] uppercase font-bold text-[#a0f3d4] tracking-wider">{activePeriod.academicYear} · Active Semester</p>
+                <p className="text-[12px] font-bold">{activePeriod.name}</p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              to="/browse-courses"
+              className="bg-[#03224d] text-white px-4 py-2.5 sm:py-2 rounded-xl text-[12px] font-bold hover:opacity-90 transition-opacity flex items-center gap-1.5 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-sm">add</span>
+              Browse Courses
+            </Link>
+          </div>
         </div>
       </div>
+
+      {/* Prominent Alert Banner: Assignments Due This Week */}
+      {dueCount > 0 && (
+        <div className="mb-6 bg-gradient-to-r from-[#ba1a1a] to-[#73000a] text-white p-4 rounded-2xl shadow-md flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-[22px]">warning</span>
+            </div>
+            <div>
+              <h4 className="font-bold text-[14px]">Upcoming Assignment Deadlines</h4>
+              <p className="text-[12px] opacity-90">
+                You have <strong>{dueCount} assignment{dueCount > 1 ? 's' : ''}</strong> due within the next 7 days.
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/assignments"
+            className="bg-white text-[#ba1a1a] px-4 py-2 rounded-xl text-[12px] font-bold hover:bg-white/90 transition-colors shrink-0"
+          >
+            View Due Assignments →
+          </Link>
+        </div>
+      )}
+
+      {/* Onboarding Card for New Students (0 enrolled courses) */}
+      {!loading && courses.length === 0 && (
+        <div className="mb-8 bg-gradient-to-r from-[#03224d] to-[#1f3864] text-white rounded-2xl p-8 shadow-xl relative overflow-hidden">
+          <div className="relative z-10 max-w-xl space-y-4">
+            <span className="bg-[#a0f3d4] text-[#002117] text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+              🚀 Getting Started
+            </span>
+            <h3 className="text-[26px] font-black leading-tight">Welcome to Njala E-Learning Portal!</h3>
+            <p className="text-[14px] text-white/80 leading-relaxed">
+              You are not enrolled in any active courses yet. Browse Njala University's course catalog to enroll, access lecture materials, submit assignments, and participate in discussions.
+            </p>
+            <div className="pt-2 flex items-center gap-3">
+              <Link
+                to="/browse-courses"
+                className="bg-[#a0f3d4] text-[#002117] px-6 py-3 rounded-xl font-extrabold text-[13px] hover:bg-[#83e9c4] transition-colors flex items-center gap-2"
+              >
+                <span>Browse Course Catalog</span>
+                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+              </Link>
+            </div>
+          </div>
+          <span className="material-symbols-outlined absolute -bottom-6 -right-6 text-[180px] opacity-10 text-white pointer-events-none">
+            school
+          </span>
+        </div>
+      )}
 
       {/* Bento grid */}
       <div className="grid grid-cols-12 gap-6">
@@ -84,23 +160,39 @@ export default function StudentDashboard() {
           <div className="flex items-center justify-between">
             <h3 className="text-lg sm:text-[20px] font-semibold leading-7 text-[#03224d]">Enrolled Courses</h3>
             <Link className="text-[12px] font-bold text-[#03224d] hover:underline" to="/courses">
-              View All
+              View All ({courses.length})
             </Link>
           </div>
 
           {loading ? (
             <LoadingSkeleton type="card" count={4} />
           ) : courses.length === 0 ? (
-            <EmptyState
-              icon="school"
-              title="No courses yet"
-              description="Enrol in a course to get started."
-              action={{ label: 'Browse Courses', onClick: () => {} }}
-            />
+            <div className="bg-white border border-[#c4c6d0] rounded-2xl p-8 text-center text-[#747780]">
+              <span className="material-symbols-outlined text-4xl text-[#c4c6d0] block mb-2">menu_book</span>
+              <p className="text-[14px] font-bold text-[#1b1c1c]">No Enrolled Courses</p>
+              <p className="text-[12px] text-[#9e9e9e] mt-1">Use the Browse Courses button above to join a class.</p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {courses.slice(0, 4).map((c) => (
-                <CourseCard key={c._id} course={c} linkTo={`/courses/${c._id}`} />
+                <div key={c._id} className="relative">
+                  <CourseCard course={c} linkTo={`/courses/${c._id}`} />
+                  {/* Course Progress Ring / Bar */}
+                  {c.progress !== undefined && (
+                    <div className="px-4 pb-3 -mt-2 bg-white rounded-b-xl border-x border-b border-[#c4c6d0]">
+                      <div className="flex justify-between items-center text-[10px] font-bold text-[#747780] mb-1">
+                        <span>Course Progress</span>
+                        <span>{c.progress ?? 0}%</span>
+                      </div>
+                      <div className="h-1.5 bg-[#f6f3f2] rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-[#086b53] rounded-full transition-all"
+                          style={{ width: `${Math.min(100, c.progress ?? 0)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           )}
@@ -173,20 +265,6 @@ export default function StudentDashboard() {
               </div>
             )}
           </section>
-
-          {/* Support CTA */}
-          <div className="bg-[#1f3864] text-[#8ba2d5] p-5 sm:p-6 rounded-xl relative overflow-hidden group shadow-xs">
-            <div className="relative z-10">
-              <h4 className="text-base sm:text-[18px] font-medium text-white mb-1.5">Need Academic Support?</h4>
-              <p className="text-xs sm:text-[14px] opacity-80 mb-4">Book a 1:1 session with a peer tutor or advisor today.</p>
-              <button className="bg-white text-[#03224d] px-4 py-2 rounded text-[12px] font-bold hover:bg-white/90 transition-colors cursor-pointer">
-                Book Now
-              </button>
-            </div>
-            <span className="material-symbols-outlined absolute -bottom-4 -right-4 text-[80px] sm:text-[96px] opacity-10 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
-              support_agent
-            </span>
-          </div>
         </div>
       </div>
     </AppLayout>

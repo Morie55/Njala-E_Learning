@@ -5,6 +5,7 @@ import { useDarkMode } from '../../hooks/useDarkMode'
 import NotificationDropdown from '../ui/NotificationDropdown'
 import AppsDropdown from '../ui/AppsDropdown'
 import UserMenuDropdown from '../ui/UserMenuDropdown'
+import SearchModal from '../ui/SearchModal'
 import api from '../../lib/api'
 
 const ROLE_BADGES = {
@@ -22,6 +23,19 @@ export default function TopBar({ onMobileToggle, onSearch }) {
   const [appsOpen, setAppsOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [searchOpen, setSearchOpen] = useState(false)
+
+  // Ctrl+K / Cmd+K global shortcut
+  useEffect(() => {
+    function handleKey(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        setSearchOpen(s => !s)
+      }
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [])
 
   useEffect(() => {
     api
@@ -34,6 +48,7 @@ export default function TopBar({ onMobileToggle, onSearch }) {
   const avatarUrl = user?.imageUrl
 
   return (
+    <>
     <header className="fixed top-0 right-0 left-0 lg:left-[280px] h-16 bg-[#fbf9f8] border-b border-[#c4c6d0] flex justify-between items-center px-3 sm:px-6 z-40 transition-all">
       {/* Left: Mobile hamburger menu toggle + Responsive Search */}
       <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 pr-2">
@@ -50,10 +65,11 @@ export default function TopBar({ onMobileToggle, onSearch }) {
             search
           </span>
           <input
-            className="w-full bg-[#f6f3f2] border border-[#c4c6d0] rounded-lg py-1.5 sm:py-2 pl-8 sm:pl-9 pr-2 sm:pr-3 text-[12px] sm:text-[14px] focus:outline-none focus:ring-2 focus:ring-[#03224d]/20 transition-all placeholder:text-[11px] sm:placeholder:text-[14px] truncate text-[#1b1c1c]"
-            placeholder="Search catalog, materials..."
+            className="w-full bg-[#f6f3f2] border border-[#c4c6d0] rounded-lg py-1.5 sm:py-2 pl-8 sm:pl-9 pr-2 sm:pr-3 text-[12px] sm:text-[14px] focus:outline-none focus:ring-2 focus:ring-[#03224d]/20 transition-all placeholder:text-[11px] sm:placeholder:text-[14px] truncate text-[#1b1c1c] cursor-pointer"
+            placeholder="Search… (Ctrl+K)"
             type="text"
-            onChange={(e) => onSearch?.(e.target.value)}
+            readOnly
+            onClick={() => setSearchOpen(true)}
           />
         </div>
       </div>
@@ -164,5 +180,8 @@ export default function TopBar({ onMobileToggle, onSearch }) {
         </div>
       </div>
     </header>
+
+    {searchOpen && <SearchModal onClose={() => setSearchOpen(false)} />}
+  </>
   )
 }

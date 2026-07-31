@@ -20,6 +20,14 @@ import notificationRoutes from './routes/notifications.js'
 import attendanceRoutes from './routes/attendance.js'
 import discussionRoutes from './routes/discussions.js'
 import paymentRoutes from './routes/payments.js'
+import quizRoutes from './routes/quizzes.js'
+import timetableRoutes from './routes/timetable.js'
+import academicPeriodRoutes from './routes/academicPeriods.js'
+import searchRoutes from './routes/search.js'
+import materialProgressRoutes from './routes/materialProgress.js'
+import messageRoutes from './routes/messages.js'
+import plagiarismRoutes from './routes/plagiarism.js'
+import wassceRoutes from './routes/wassce.js'
 
 // Middleware & Script imports
 import { enforceStatus } from './middleware/enforceStatus.js'
@@ -74,6 +82,14 @@ app.use('/api/v1/notifications', notificationRoutes)
 app.use('/api/v1/attendance', attendanceRoutes)
 app.use('/api/v1/discussions', discussionRoutes)
 app.use('/api/v1/payments', paymentRoutes)
+app.use('/api/v1/quizzes', quizRoutes)
+app.use('/api/v1/timetable', timetableRoutes)
+app.use('/api/v1/academic-periods', academicPeriodRoutes)
+app.use('/api/v1/search', searchRoutes)
+app.use('/api/v1/materials', materialProgressRoutes)
+app.use('/api/v1/messages', messageRoutes)
+app.use('/api/v1/wassce', wassceRoutes)
+app.use('/api/v1', plagiarismRoutes)
 
 // Health check
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }))

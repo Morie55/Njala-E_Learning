@@ -2,15 +2,18 @@ import mongoose from 'mongoose'
 
 const announcementSchema = new mongoose.Schema(
   {
-    courseId:    { type: mongoose.Schema.Types.ObjectId, ref: 'Course', default: null }, // null = university-wide
-    postedBy:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    message:     { type: String, required: true, minlength: 10 },
-    postedAt:    { type: Date, default: Date.now },
+    title:        { type: String, default: 'Announcement' },
+    courseId:     { type: mongoose.Schema.Types.ObjectId, ref: 'Course', default: null }, // null = system or dept-wide
+    departmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Department', default: null }, // for dept-wide announcements
+    postedBy:     { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    message:      { type: String, required: true, minlength: 10 },
+    postedAt:     { type: Date, default: Date.now },
   },
   { timestamps: true }
 )
 
 announcementSchema.index({ courseId: 1 })
+announcementSchema.index({ departmentId: 1 })
 announcementSchema.index({ postedAt: -1 })
 
-export default mongoose.model('Announcement', announcementSchema)
+export default mongoose.models.Announcement || mongoose.model('Announcement', announcementSchema)

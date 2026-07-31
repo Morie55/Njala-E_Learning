@@ -7,11 +7,30 @@ import { uploadToCloudinary } from '../lib/cloudinary.js'
 import Submission from '../models/Submission.js'
 import Assignment from '../models/Assignment.js'
 import Enrollment from '../models/Enrollment.js'
-
 import { uploadRateLimiter } from '../middleware/rateLimiter.js'
+import { fileTypeFromBuffer } from 'file-type'
 
 const router = Router()
 const auth = [requireAuth, populateUser, enforceStatus]
+
+const ALLOWED_MIMES = new Set([
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/zip',
+  'application/x-zip-compressed',
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'video/mp4',
+  'video/quicktime',
+  'text/plain',
+])
+const MAX_FILE_SIZE_MB = 50
 
 /** POST /api/v1/assignments/:id/submissions  [student] – submit assignment */
 router.post('/:id/submissions', ...auth, uploadRateLimiter, upload.single('file'), async (req, res, next) => {
@@ -25,6 +44,19 @@ router.post('/:id/submissions', ...auth, uploadRateLimiter, upload.single('file'
 
     let fileUrl = ''
     if (req.file) {
+      // Validate file size
+      const sizeMB = req.file.size / (1024 * 1024)
+      if (sizeMB > MAX_FILE_SIZE_MB) {
+        return res.status(400).json({ error: `File too large. Maximum size is ${MAX_FILE_SIZE_MB}MB.` })
+      }
+      // Detect actual MIME from buffer (ignores spoofed extensions)
+      const detected = await fileTypeFromBuffer(req.file.buffer)
+      const mime = detected?.mime ?? req.file.mimetype
+      if (!ALLOWED_MIMES.has(mime)) {
+        return res.status(400).json({
+          error: `File type "${detected?.ext ?? 'unknown'}" is not allowed. Accepted: PDF, Word, PowerPoint, Excel, ZIP, images, video.`,
+        })
+      }
       fileUrl = await uploadToCloudinary(req.file.buffer, { folder: 'nelms/submissions' })
     }
 
@@ -41,12 +73,18 @@ router.post('/:id/submissions', ...auth, uploadRateLimiter, upload.single('file'
       }
     }
 
+    const textContent = req.body.textContent ?? ''
+
+    if (!fileUrl && !textContent.trim()) {
+      return res.status(400).json({ error: 'Please provide either a file upload or text submission.' })
+    }
+
     // Upsert: only set score/feedback/gradedBy/gradedAt on INSERT (first submission).
     // On resubmit, preserve any existing grade the lecturer already entered.
     const submission = await Submission.findOneAndUpdate(
       { assignmentId: req.params.id, studentId: req.dbUser._id },
       {
-        $set: { fileUrl, submittedAt: now, isLate, daysLate },
+        $set: { fileUrl, textContent: textContent.trim(), submittedAt: now, isLate, daysLate },
         $setOnInsert: { score: null, feedback: '', gradedBy: null, gradedAt: null },
       },
       { upsert: true, returnDocument: 'after' }

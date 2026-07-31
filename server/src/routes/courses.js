@@ -12,6 +12,8 @@ import Assignment from '../models/Assignment.js'
 import Material from '../models/Material.js'
 import Submission from '../models/Submission.js'
 import User from '../models/User.js'
+import Notification from '../models/Notification.js'
+import AcademicPeriod from '../models/AcademicPeriod.js'
 
 function csvSafe(value) {
   const str = String(value ?? '')
@@ -56,19 +58,34 @@ router.get('/', ...auth, async (req, res, next) => {
       query = { lecturerId: _id }
     }
 
-    const courses = await Course.find(query)
+    const totalCourses = await Course.countDocuments(query)
+    const page = req.query.page ? parseInt(req.query.page) : null
+    const limit = req.query.limit ? parseInt(req.query.limit) : null
+
+    let courseQuery = Course.find(query)
       .populate('lecturerId', 'fullName')
       .populate('schoolId', 'name code')
       .populate('departmentId', 'name code')
-      .lean()
+      .sort({ createdAt: -1 })
 
-    // Enrich with enrollment counts, enrollment progress, lecturer name
+    if (page && limit) {
+      const skip = (page - 1) * limit
+      courseQuery = courseQuery.skip(skip).limit(limit)
+    }
+
+    const courses = await courseQuery.lean()
+
+    // Enrich with enrollment counts, waitlist count, enrollment progress, lecturer name
     const enriched = await Promise.all(courses.map(async c => {
       const enrollmentCount = await Enrollment.countDocuments({ courseId: c._id, status: 'active' })
+      const waitlistCount = await Enrollment.countDocuments({ courseId: c._id, status: 'waitlisted' })
       const enrollment = role === 'student' ? await Enrollment.findOne({ courseId: c._id, studentId: _id }).lean() : null
       return {
         ...c,
         enrollmentCount,
+        waitlistCount,
+        enrollmentStatus: enrollment?.status ?? null,
+        waitlistPosition: enrollment?.waitlistPosition ?? null,
         progress: enrollment?.progress ?? 0,
         lecturerName: c.lecturerId?.fullName ?? null,
         schoolName: c.schoolId?.name ?? null,
@@ -76,7 +93,13 @@ router.get('/', ...auth, async (req, res, next) => {
       }
     }))
 
-    res.json({ courses: enriched })
+    res.json({
+      courses: enriched,
+      totalCourses,
+      page: page || 1,
+      limit: limit || totalCourses,
+      totalPages: limit ? Math.ceil(totalCourses / limit) : 1,
+    })
   } catch (err) { next(err) }
 })
 
@@ -216,8 +239,24 @@ router.get('/:id/materials', ...auth, async (req, res, next) => {
       return res.status(403).json({ error: 'Forbidden' })
     }
 
-    const materials = await Material.find({ courseId: req.params.id }).sort({ createdAt: -1 }).lean()
-    res.json({ materials })
+    const totalMaterials = await Material.countDocuments({ courseId: req.params.id })
+    const page = req.query.page ? parseInt(req.query.page) : null
+    const limit = req.query.limit ? parseInt(req.query.limit) : null
+
+    let matQuery = Material.find({ courseId: req.params.id }).sort({ createdAt: -1 })
+    if (page && limit) {
+      const skip = (page - 1) * limit
+      matQuery = matQuery.skip(skip).limit(limit)
+    }
+
+    const materials = await matQuery.lean()
+    res.json({
+      materials,
+      totalMaterials,
+      page: page || 1,
+      limit: limit || totalMaterials,
+      totalPages: limit ? Math.ceil(totalMaterials / limit) : 1,
+    })
   } catch (err) { next(err) }
 })
 
@@ -314,12 +353,78 @@ router.post('/:id/enroll', ...auth, async (req, res, next) => {
     if (!course) return res.status(404).json({ error: 'Course not found' })
     if (course.status !== 'active') return res.status(400).json({ error: 'This course is not open for enrollment' })
 
+    // Check active AcademicPeriod enrollment window
+    const activePeriod = await AcademicPeriod.findOne({ isActive: true }).lean()
+    if (activePeriod) {
+      const now = new Date()
+      if (activePeriod.enrollmentOpen && now < new Date(activePeriod.enrollmentOpen)) {
+        return res.status(403).json({ error: `Enrollment opens on ${new Date(activePeriod.enrollmentOpen).toLocaleDateString('en-GB')}` })
+      }
+      if (activePeriod.enrollmentClose && now > new Date(activePeriod.enrollmentClose)) {
+        return res.status(403).json({ error: 'Course enrollment period has closed for this semester' })
+      }
+    }
+
+    // Check if already enrolled
+    const existing = await Enrollment.findOne({ studentId: _id, courseId: req.params.id })
+    if (existing) {
+      if (existing.status === 'active') return res.status(409).json({ error: 'Already enrolled' })
+      if (existing.status === 'waitlisted') return res.status(409).json({ error: 'Already on the waitlist', position: existing.waitlistPosition })
+    }
+
+    // Check enrollment capacity
+    if (course.maxEnrollment) {
+      const currentCount = await Enrollment.countDocuments({ courseId: req.params.id, status: 'active' })
+      if (currentCount >= course.maxEnrollment) {
+        // Add to waitlist
+        const waitlistCount = await Enrollment.countDocuments({ courseId: req.params.id, status: 'waitlisted' })
+        const enrollment = await Enrollment.findOneAndUpdate(
+          { studentId: _id, courseId: req.params.id },
+          { $setOnInsert: { status: 'waitlisted', waitlistPosition: waitlistCount + 1, progress: 0 } },
+          { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
+        )
+        return res.status(202).json({ enrollment, waitlisted: true, position: waitlistCount + 1, message: `Course is full. You are #${waitlistCount + 1} on the waitlist.` })
+      }
+    }
+
     const enrollment = await Enrollment.findOneAndUpdate(
       { studentId: _id, courseId: req.params.id },
-      { $setOnInsert: { status: 'active', progress: 0 } },
+      { $set: { status: 'active' }, $setOnInsert: { progress: 0 } },
       { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     )
-    res.status(201).json(enrollment)
+    res.status(201).json({ enrollment, waitlisted: false })
+  } catch (err) { next(err) }
+})
+
+/** DELETE /api/v1/courses/:id/enroll  [student] — Drop course & promote waitlist */
+router.delete('/:id/enroll', ...auth, async (req, res, next) => {
+  const { role, _id } = req.dbUser
+  if (role !== 'student') return res.status(403).json({ error: 'Students only' })
+  try {
+    await Enrollment.findOneAndDelete({ studentId: _id, courseId: req.params.id })
+
+    // Promote first waitlisted student
+    const nextWaiting = await Enrollment.findOne({ courseId: req.params.id, status: 'waitlisted' }).sort({ waitlistPosition: 1 })
+    if (nextWaiting) {
+      nextWaiting.status = 'active'
+      nextWaiting.waitlistPosition = null
+      await nextWaiting.save()
+
+      // Notify the promoted student
+      const promotedUser = await User.findById(nextWaiting.studentId).lean()
+      if (promotedUser) {
+        await Notification.create({
+          recipientId: promotedUser.clerkId || promotedUser._id.toString(),
+          senderId: _id.toString(),
+          title: 'Enrolled from Waitlist!',
+          message: `A spot opened up in ${(await Course.findById(req.params.id).lean())?.title ?? 'a course'}. You have been automatically enrolled.`,
+          type: 'info',
+          link: '/courses',
+        }).catch(() => {})
+      }
+    }
+
+    res.json({ success: true })
   } catch (err) { next(err) }
 })
 

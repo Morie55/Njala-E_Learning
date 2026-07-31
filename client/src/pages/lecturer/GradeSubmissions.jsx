@@ -18,8 +18,12 @@ export default function GradeSubmissions() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [previewModal, setPreviewModal] = useState(null)
+  const [plagiarismModal, setPlagiarismModal] = useState(null)
+  const [scanningPlagiarism, setScanningPlagiarism] = useState({})
+  const [batchScanning, setBatchScanning] = useState(false)
+  const [page, setPage] = useState(1)
 
-  useEffect(() => {
+  const fetchSubmissions = () => {
     api.get(`/assignments/${assignmentId}/submissions`)
       .then(r => {
         setSubmissions(r.data?.submissions ?? [])
@@ -28,7 +32,40 @@ export default function GradeSubmissions() {
         r.data?.submissions?.forEach(s => { init[s._id] = s.score ?? ''; finit[s._id] = s.feedback ?? '' })
         setScores(init); setFeedback(finit)
       }).catch(() => {}).finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    fetchSubmissions()
   }, [assignmentId])
+
+  async function handleScanPlagiarism(subId) {
+    setScanningPlagiarism(p => ({ ...p, [subId]: true }))
+    try {
+      const res = await api.post(`/submissions/${subId}/check-plagiarism`)
+      setSubmissions(prev => prev.map(s => s._id === subId ? {
+        ...s,
+        plagiarismScore: res.data.plagiarismScore,
+        plagiarismStatus: res.data.plagiarismStatus,
+        plagiarismMatches: res.data.matches,
+      } : s))
+    } catch (err) {
+      alert(err.response?.data?.error ?? 'Plagiarism scan failed')
+    } finally {
+      setScanningPlagiarism(p => ({ ...p, [subId]: false }))
+    }
+  }
+
+  async function handleBatchPlagiarism() {
+    setBatchScanning(true)
+    try {
+      await api.post(`/assignments/${assignmentId}/check-all-plagiarism`)
+      fetchSubmissions()
+    } catch (err) {
+      alert(err.response?.data?.error ?? 'Batch plagiarism scan failed')
+    } finally {
+      setBatchScanning(false)
+    }
+  }
 
   async function handleGrade(id) {
     setSaving(p => ({ ...p, [id]: true }))
@@ -129,11 +166,20 @@ export default function GradeSubmissions() {
             {assignment?.title} • Max score: <span className="font-bold text-[#03224d]">{assignment?.maxScore}</span>
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={handleBatchPlagiarism}
+            disabled={batchScanning || submissions.length === 0}
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#03224d] text-white font-bold text-[12px] hover:opacity-90 transition-all rounded-lg disabled:opacity-50 shadow-sm cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[18px]">{batchScanning ? 'progress_activity' : 'find_in_page'}</span>
+            {batchScanning ? 'Scanning All...' : 'Scan All Plagiarism'}
+          </button>
+
           <button
             onClick={handleExportCSV}
             disabled={submissions.length === 0}
-            className="flex items-center gap-1.5 px-4 py-2 border border-[#c4c6d0] text-[#03224d] font-bold text-[12px] hover:bg-[#f0eded] transition-all rounded-lg disabled:opacity-50 shadow-sm"
+            className="flex items-center gap-1.5 px-4 py-2 border border-[#c4c6d0] text-[#03224d] font-bold text-[12px] hover:bg-[#f0eded] transition-all rounded-lg disabled:opacity-50 shadow-sm cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">download</span>
             Export CSV
@@ -199,7 +245,7 @@ export default function GradeSubmissions() {
                 {submissions.length === 0 ? 'No submissions yet for this assignment.' : 'No submissions match your search or filter.'}
               </p>
             </div>
-          ) : filteredSubmissions.map(s => (
+          ) : filteredSubmissions.slice((page - 1) * 10, page * 10).map(s => (
             <div key={s._id} className="bg-white border border-[#c4c6d0] rounded-xl p-6 shadow-sm transition-all hover:border-[#747780]">
               <div className="flex items-start gap-4">
                 {/* Student avatar */}
@@ -207,25 +253,67 @@ export default function GradeSubmissions() {
                   {s.studentName?.[0]?.toUpperCase() ?? 'S'}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-[15px] font-bold text-[#03224d]">{s.studentName}</p>
-                        {s.isLate && (
-                          <span className="bg-[#ffdad6] text-[#ba1a1a] text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                            <span className="material-symbols-outlined text-[12px]">schedule</span>
-                            Submitted {s.daysLate || 1} {s.daysLate === 1 ? 'day' : 'days'} late
-                          </span>
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-[15px] font-bold text-[#03224d]">{s.studentName}</p>
+                          {s.isLate && (
+                            <span className="bg-[#ffdad6] text-[#ba1a1a] text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[12px]">schedule</span>
+                              Submitted {s.daysLate || 1} {s.daysLate === 1 ? 'day' : 'days'} late
+                            </span>
+                          )}
+
+                          {/* Plagiarism Similarity Badge */}
+                          {s.plagiarismScore !== null && s.plagiarismScore !== undefined && (
+                            <button
+                              type="button"
+                              onClick={() => setPlagiarismModal({ sub: s })}
+                              className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 cursor-pointer transition-transform hover:scale-105 ${
+                                s.plagiarismScore >= 25
+                                  ? 'bg-[#ffdad6] text-[#ba1a1a] border border-[#ba1a1a]/30'
+                                  : 'bg-[#a0f3d4] text-[#00513e] border border-[#086b53]/30'
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-[12px]">{s.plagiarismScore >= 25 ? 'warning' : 'verified'}</span>
+                              Similarity: {s.plagiarismScore}% {s.plagiarismScore >= 25 ? '(FLAGGED)' : ''}
+                            </button>
+                          )}
+                        </div>
+                        {s.studentEmail && (
+                          <p className="text-[12px] text-[#44474f]">{s.studentEmail}</p>
                         )}
                       </div>
-                      {s.studentEmail && (
-                        <p className="text-[12px] text-[#44474f]">{s.studentEmail}</p>
-                      )}
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleScanPlagiarism(s._id)}
+                          disabled={scanningPlagiarism[s._id]}
+                          className="px-3 py-1 bg-[#f0eded] text-[#03224d] rounded border border-[#c4c6d0] text-[11px] font-bold hover:bg-[#e4e2e1] transition-colors flex items-center gap-1 cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">
+                            {scanningPlagiarism[s._id] ? 'progress_activity' : 'search_check'}
+                          </span>
+                          {scanningPlagiarism[s._id] ? 'Scanning...' : 'Scan Plagiarism'}
+                        </button>
+                        <p className="text-[12px] text-[#44474f]">
+                          Submitted: {new Date(s.submittedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-[12px] text-[#44474f]">Submitted: {new Date(s.submittedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+
+                  {/* Online Text Submission Content */}
+                  {s.textContent && (
+                    <div className="mb-4 bg-[#f0f3ff] border border-[#7c9bd6]/40 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-2 text-[#03224d]">
+                        <span className="material-symbols-outlined text-[18px]">edit_note</span>
+                        <h4 className="font-bold text-[13px] uppercase tracking-wider">Online Text Response</h4>
+                      </div>
+                      <div className="text-[13px] text-[#1b1c1c] whitespace-pre-wrap leading-relaxed font-mono bg-white p-3.5 rounded-lg border border-[#c4c6d0]/40">
+                        {s.textContent}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Submission Attachment Box */}
                   {s.fileUrl ? (
@@ -241,7 +329,7 @@ export default function GradeSubmissions() {
                             {getFileName(s.fileUrl)}
                           </p>
                           <p className="text-[11px] text-[#44474f]">
-                            Student Submitted Solution
+                            Student Submitted Solution File
                           </p>
                         </div>
                       </div>
@@ -265,12 +353,12 @@ export default function GradeSubmissions() {
                         </a>
                       </div>
                     </div>
-                  ) : (
+                  ) : !s.textContent ? (
                     <div className="mb-4 p-3 bg-[#f6f3f2] border border-dashed border-[#c4c6d0] rounded-lg flex items-center gap-2 text-[#747780] text-[12px]">
                       <span className="material-symbols-outlined text-[18px]">info</span>
-                      <span>No file solution attached with this submission.</span>
+                      <span>No file solution or text content attached with this submission.</span>
                     </div>
-                  )}
+                  ) : null}
 
                   {/* Grading Inputs Form */}
                   <div className="bg-[#fbf9f8] border border-[#c4c6d0] rounded-lg p-4">
@@ -358,6 +446,32 @@ export default function GradeSubmissions() {
         </div>
       )}
 
+      {/* Pagination Bar */}
+      {filteredSubmissions.length > 10 && (
+        <div className="mt-6 flex items-center justify-between bg-white border border-[#c4c6d0] rounded-xl px-4 py-3 shadow-xs">
+          <p className="text-[12px] text-[#44474f]">
+            Showing <span className="font-bold text-[#03224d]">{(page - 1) * 10 + 1}</span>–<span className="font-bold text-[#03224d]">{Math.min(page * 10, filteredSubmissions.length)}</span> of <span className="font-bold text-[#03224d]">{filteredSubmissions.length}</span> submissions
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1.5 border border-[#c4c6d0] rounded text-[12px] font-bold text-[#03224d] hover:bg-[#f0eded] disabled:opacity-40"
+            >
+              Previous
+            </button>
+            <span className="text-[12px] font-bold text-[#03224d] px-2">Page {page} of {Math.ceil(filteredSubmissions.length / 10)}</span>
+            <button
+              onClick={() => setPage(p => Math.min(Math.ceil(filteredSubmissions.length / 10), p + 1))}
+              disabled={page >= Math.ceil(filteredSubmissions.length / 10)}
+              className="px-3 py-1.5 border border-[#c4c6d0] rounded text-[12px] font-bold text-[#03224d] hover:bg-[#f0eded] disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* File Preview Modal */}
       {previewModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
@@ -401,6 +515,87 @@ export default function GradeSubmissions() {
                   className="w-full h-[75vh] border-0 rounded bg-white shadow-sm"
                 />
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Plagiarism Similarity Report Modal */}
+      {plagiarismModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4" onClick={() => setPlagiarismModal(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-4 bg-[#03224d] text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#a0f3d4]">search_check</span>
+                <h3 className="font-bold text-[15px]">
+                  Plagiarism Report — {plagiarismModal.sub?.studentName}
+                </h3>
+              </div>
+              <button onClick={() => setPlagiarismModal(null)} className="p-1 hover:bg-white/20 rounded-full text-white">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-5">
+              {/* Score Header */}
+              <div className={`p-4 rounded-xl border flex items-center justify-between ${
+                (plagiarismModal.sub?.plagiarismScore ?? 0) >= 25
+                  ? 'bg-[#ffdad6] border-[#ba1a1a] text-[#93000a]'
+                  : 'bg-[#a0f3d4]/30 border-[#086b53] text-[#00513e]'
+              }`}>
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wider">Similarity Score</p>
+                  <p className="text-[28px] font-extrabold">{plagiarismModal.sub?.plagiarismScore ?? 0}%</p>
+                </div>
+                <div className="text-right">
+                  <span className={`px-3 py-1 rounded-full text-[12px] font-extrabold uppercase ${
+                    (plagiarismModal.sub?.plagiarismScore ?? 0) >= 25 ? 'bg-[#ba1a1a] text-white' : 'bg-[#086b53] text-white'
+                  }`}>
+                    {(plagiarismModal.sub?.plagiarismScore ?? 0) >= 25 ? '⚠️ Flagged for Review' : '✓ Normal'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Matched Sources List */}
+              <div>
+                <h4 className="font-bold text-[14px] text-[#03224d] mb-3">Matched Peer Submissions ({plagiarismModal.sub?.plagiarismMatches?.length ?? 0})</h4>
+
+                {(!plagiarismModal.sub?.plagiarismMatches || plagiarismModal.sub.plagiarismMatches.length === 0) ? (
+                  <p className="text-[13px] text-[#747780] py-4 text-center bg-[#f6f3f2] rounded-xl">
+                    No matching text overlaps detected with other submissions.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {plagiarismModal.sub.plagiarismMatches.map((m, idx) => (
+                      <div key={idx} className="p-4 bg-[#f6f3f2] border border-[#c4c6d0] rounded-xl space-y-2">
+                        <div className="flex justify-between items-center">
+                          <p className="font-bold text-[13px] text-[#1b1c1c] flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[16px] text-[#03224d]">person</span>
+                            Matched with: {m.matchedStudentName}
+                          </p>
+                          <span className="text-[12px] font-extrabold text-[#ba1a1a] bg-[#ffdad6] px-2.5 py-0.5 rounded-full">
+                            {m.similarityPct}% Overlap
+                          </span>
+                        </div>
+                        {m.matchedSnippet && (
+                          <div className="p-3 bg-white border border-[#c4c6d0]/40 rounded-lg text-[12px] text-[#44474f] font-mono whitespace-pre-wrap">
+                            {m.matchedSnippet}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-[#c4c6d0] bg-[#f6f3f2] flex justify-end">
+              <button
+                onClick={() => setPlagiarismModal(null)}
+                className="bg-[#03224d] text-white px-5 py-2 rounded-xl text-[12px] font-bold hover:opacity-90"
+              >
+                Close Report
+              </button>
             </div>
           </div>
         </div>

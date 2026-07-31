@@ -1,0 +1,18 @@
+{
+  "name": "Njala University E-Learning Management System",
+  "short_name": "NELMS",
+  "description": "Njala University Official Digital Learning Portal for Sierra Leone",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbf9f8",
+  "theme_color": "#03224d",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

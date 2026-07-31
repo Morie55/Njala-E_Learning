@@ -5,12 +5,32 @@ import AppLayout from '../../components/layout/AppLayout'
 import LoadingSkeleton from '../../components/ui/LoadingSkeleton'
 import api from '../../lib/api'
 
+const DEFAULT_SUBJECTS = [
+  { subject: 'English Language', grade: 'C5' },
+  { subject: 'Mathematics', grade: 'B3' },
+  { subject: 'Biology', grade: 'C6' },
+  { subject: 'Chemistry', grade: 'B2' },
+  { subject: 'Physics', grade: 'C4' },
+  { subject: 'Agricultural Science', grade: 'A1' },
+]
+
 export default function Profile() {
   const { user } = useClerkUser()
   const { dbUser } = useUser()
   const [enrollments, setEnrollments] = useState([])
   const [gpa, setGpa] = useState(null)
+  const [wassce, setWassce] = useState(null)
   const [loading, setLoading] = useState(true)
+
+  // Modal State
+  const [showWassceModal, setShowWassceModal] = useState(false)
+  const [wassceForm, setWassceForm] = useState({
+    indexNumber: '1040108922',
+    examYear: 2024,
+    examCenter: 'Albert Academy, Freetown',
+    subjects: DEFAULT_SUBJECTS,
+  })
+  const [savingWassce, setSavingWassce] = useState(false)
 
   const name = user?.fullName ?? dbUser?.fullName ?? 'Student'
   const email = user?.primaryEmailAddress?.emailAddress ?? ''
@@ -24,17 +44,49 @@ export default function Profile() {
       dbUser?.role === 'student'
         ? api.get('/submissions/gpa').catch(() => ({ data: null }))
         : Promise.resolve({ data: null }),
-    ]).then(([cRes, gRes]) => {
+      api.get('/wassce/me').catch(() => ({ data: { qualification: null } })),
+    ]).then(([cRes, gRes, wRes]) => {
       setEnrollments(cRes.data?.courses ?? [])
       setGpa(gRes.data)
+      setWassce(wRes.data?.qualification ?? null)
+      if (wRes.data?.qualification) {
+        setWassceForm({
+          indexNumber: wRes.data.qualification.indexNumber,
+          examYear: wRes.data.qualification.examYear,
+          examCenter: wRes.data.qualification.examCenter,
+          subjects: wRes.data.qualification.subjects,
+        })
+      }
     }).finally(() => setLoading(false))
   }, [dbUser?.role])
+
+  async function handleSaveWassce(e) {
+    e.preventDefault()
+    setSavingWassce(true)
+    try {
+      const res = await api.post('/wassce/save', wassceForm)
+      setWassce(res.data.qualification)
+      setShowWassceModal(false)
+    } catch (err) {
+      alert(err.response?.data?.error ?? 'Failed to save WASSCE results')
+    } finally {
+      setSavingWassce(false)
+    }
+  }
+
+  const completedCount = enrollments.filter(c => c.status === 'completed' || (c.progress && c.progress >= 100)).length
 
   const gpaClass = (g) => {
     if (g >= 4.5) return 'text-[#086b53] bg-[#a0f3d4]'
     if (g >= 3.5) return 'text-[#001a73] bg-[#d8e2ff]'
     if (g >= 2.5) return 'text-[#5a3b00] bg-[#ffe8b5]'
     return 'text-[#93000a] bg-[#ffdad6]'
+  }
+
+  const gradeBadgeClass = (grade) => {
+    if (['A1', 'B2', 'B3', 'C4', 'C5', 'C6'].includes(grade)) return 'bg-[#a0f3d4] text-[#00513e]'
+    if (['D7', 'E8'].includes(grade)) return 'bg-[#ffe8b5] text-[#5a3b00]'
+    return 'bg-[#ffdad6] text-[#93000a]'
   }
 
   return (
@@ -98,16 +150,16 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Contact IT */}
+          {/* Contact IT Support Direct Email Link */}
           <div className="bg-[#1f3864] text-white rounded-xl p-6">
             <h3 className="text-[16px] font-semibold mb-2">Need to update your profile?</h3>
             <p className="text-[13px] opacity-80 mb-4">Contact IT support to update your name, ID number, or department assignment.</p>
             <a
-              href="mailto:kmorie18c@njala.edu.sl"
+              href="mailto:kmorie18c@njala.edu.sl?subject=NELMS%20Profile%20Update%20Request"
               className="inline-flex items-center gap-2 bg-white text-[#03224d] px-4 py-2 rounded-lg text-[12px] font-bold hover:bg-white/90 transition-colors"
             >
               <span className="material-symbols-outlined text-[16px]">mail</span>
-              Contact IT Support
+              kmorie18c@njala.edu.sl
             </a>
           </div>
         </div>
@@ -139,80 +191,253 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* GPA by Semester */}
-          {gpa && gpa.semesters?.length > 0 && (
-            <div className="bg-white border border-[#c4c6d0] rounded-xl p-6">
-              <h3 className="text-[18px] font-semibold text-[#03224d] mb-4 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[20px]">grade</span>
-                Academic Performance
-              </h3>
+          {/* WASSCE Entry Qualification Result Slip Card */}
+          <div className="bg-white border border-[#c4c6d0] rounded-xl p-6 shadow-xs">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <div>
+                <h3 className="text-[18px] font-semibold text-[#03224d] flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[22px] text-[#086b53]">workspace_premium</span>
+                  WASSCE Entry Qualification
+                </h3>
+                <p className="text-[12px] text-[#44474f]">WAEC Senior School Certificate Examination Entry Record</p>
+              </div>
+              <button
+                onClick={() => setShowWassceModal(true)}
+                className="bg-[#03224d] text-white px-4 py-2 rounded-xl text-[12px] font-bold hover:opacity-90 transition-opacity flex items-center gap-1.5 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">edit</span>
+                {wassce ? 'Edit WASSCE Results' : 'Add WASSCE Results'}
+              </button>
+            </div>
+
+            {!wassce ? (
+              <div className="bg-[#f6f3f2] border border-dashed border-[#c4c6d0] rounded-xl p-6 text-center text-[#747780]">
+                <span className="material-symbols-outlined text-4xl block mb-2 text-[#c4c6d0]">description</span>
+                <p className="text-[14px] font-bold text-[#1b1c1c]">No WASSCE Record Entered</p>
+                <p className="text-[12px] mt-1 mb-4">Click below to record your WAEC WASSCE examination results.</p>
+                <button
+                  onClick={() => setShowWassceModal(true)}
+                  className="bg-[#086b53] text-white px-4 py-2 rounded-xl text-[12px] font-bold hover:opacity-90"
+                >
+                  Enter WASSCE Grades
+                </button>
+              </div>
+            ) : (
               <div className="space-y-4">
-                {gpa.semesters.map(sem => (
-                  <div key={sem.semester} className="border border-[#c4c6d0] rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="font-bold text-[#03224d] text-[14px]">{sem.semester}</p>
-                      <span className={`px-3 py-1 rounded-full text-[12px] font-bold ${gpaClass(sem.gpa)}`}>
-                        GPA: {sem.gpa.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="space-y-2">
-                      {sem.courses.map(cg => (
-                        <div key={cg.course._id} className="flex items-center justify-between text-[13px]">
-                          <span className="text-[#44474f] truncate mr-4">{cg.course.title}</span>
-                          <span className="font-bold text-[#03224d] shrink-0">{cg.letterGrade} ({cg.percentage}%)</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-                <div className="bg-[#03224d] text-white rounded-lg p-4 flex items-center justify-between">
+                {/* Status Bar */}
+                <div className="bg-[#f6f3f2] border border-[#c4c6d0]/60 rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">
                   <div>
-                    <p className="text-[12px] opacity-75 uppercase tracking-wider">Cumulative GPA</p>
-                    <p className="text-[24px] font-extrabold">{gpa.cumulativeGpa.toFixed(2)}</p>
+                    <p className="text-[11px] font-bold text-[#44474f] uppercase tracking-wider">WAEC Index Number</p>
+                    <p className="text-[16px] font-mono font-bold text-[#03224d]">{wassce.indexNumber} ({wassce.examYear})</p>
+                    <p className="text-[12px] text-[#747780]">{wassce.examCenter}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[13px] font-bold">{gpa.cumulativeClass}</p>
-                    <p className="text-[11px] opacity-75">{gpa.totalCreditHours} Credit Hours</p>
+
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="text-[11px] font-bold text-[#44474f] uppercase tracking-wider">Total Credits</p>
+                      <p className="text-[20px] font-extrabold text-[#086b53]">{wassce.totalCredits} Credits</p>
+                    </div>
+                    <span className={`px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider ${
+                      wassce.isDegreeEligible
+                        ? 'bg-[#a0f3d4] text-[#00513e] border border-[#086b53]/40'
+                        : 'bg-[#ffe8b5] text-[#5a3b00] border border-[#c8961a]/40'
+                    }`}>
+                      {wassce.isDegreeEligible ? '✓ Degree Entry Eligible' : '⚠️ Diploma / Certificate Entry'}
+                    </span>
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
 
-          {/* Enrolled Courses */}
+                {/* Subject Table */}
+                <div className="border border-[#c4c6d0] rounded-xl overflow-hidden">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-[#03224d] text-white text-[12px] font-bold uppercase tracking-wider">
+                        <th className="p-3">Subject</th>
+                        <th className="p-3 text-center">Grade</th>
+                        <th className="p-3 text-center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#c4c6d0]/60 text-[13px]">
+                      {wassce.subjects?.map((s, idx) => (
+                        <tr key={idx} className="hover:bg-[#f6f3f2]">
+                          <td className="p-3 font-medium text-[#1b1c1c]">{s.subject}</td>
+                          <td className="p-3 text-center">
+                            <span className={`inline-block px-2.5 py-0.5 rounded-full font-bold text-[12px] ${gradeBadgeClass(s.grade)}`}>
+                              {s.grade}
+                            </span>
+                          </td>
+                          <td className="p-3 text-center font-bold">
+                            {s.isCredit ? (
+                              <span className="text-[#086b53]">Credit ✓</span>
+                            ) : (
+                              <span className="text-[#ba1a1a]">Pass / Fail</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Enrolled Courses & Progress Bars */}
           {dbUser?.role === 'student' && (
             <div className="bg-white border border-[#c4c6d0] rounded-xl p-6">
-              <h3 className="text-[18px] font-semibold text-[#03224d] mb-4 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[20px]">school</span>
-                Enrolled Courses
-                <span className="ml-auto text-[13px] font-normal text-[#44474f]">{enrollments.length} course{enrollments.length !== 1 ? 's' : ''}</span>
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[18px] font-semibold text-[#03224d] flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[20px]">school</span>
+                  Enrolled Courses
+                </h3>
+                <div className="flex items-center gap-2 text-[12px] font-bold text-[#44474f]">
+                  <span className="bg-[#d8e2ff] text-[#001a41] px-2.5 py-0.5 rounded-full">{enrollments.length} Enrolled</span>
+                  <span className="bg-[#a0f3d4] text-[#00513e] px-2.5 py-0.5 rounded-full">{completedCount} Completed</span>
+                </div>
+              </div>
+
               {loading ? (
                 <LoadingSkeleton type="card" count={3} />
               ) : enrollments.length === 0 ? (
                 <p className="text-[14px] text-[#44474f] text-center py-6">No courses enrolled yet.</p>
               ) : (
-                <div className="space-y-3">
-                  {enrollments.map(c => (
-                    <div key={c._id} className="flex items-center gap-4 p-3 bg-[#f6f3f2] rounded-lg">
-                      <div className="w-10 h-10 rounded-lg bg-[#03224d] flex items-center justify-center text-white shrink-0">
-                        <span className="material-symbols-outlined text-[18px]">menu_book</span>
+                <div className="space-y-4">
+                  {enrollments.map(c => {
+                    const prog = Math.min(100, Math.max(0, c.progress ?? 0))
+                    return (
+                      <div key={c._id} className="p-4 bg-[#f6f3f2] rounded-xl border border-[#c4c6d0]/40 space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-9 h-9 rounded-lg bg-[#03224d] flex items-center justify-center text-white shrink-0">
+                              <span className="material-symbols-outlined text-[18px]">menu_book</span>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-bold text-[#03224d] text-[14px] truncate">{c.title}</p>
+                              <p className="text-[11px] text-[#44474f]">{c.code} • {c.semester}</p>
+                            </div>
+                          </div>
+                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full shrink-0 ${prog >= 100 ? 'bg-[#a0f3d4] text-[#00513e]' : 'bg-[#d8e2ff] text-[#001a41]'}`}>
+                            {prog >= 100 ? 'Completed' : `${prog}% Progress`}
+                          </span>
+                        </div>
+
+                        {/* Progress bar */}
+                        <div className="w-full bg-[#c4c6d0]/30 h-2 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${prog >= 100 ? 'bg-[#086b53]' : 'bg-[#03224d]'}`}
+                            style={{ width: `${prog}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-[#03224d] text-[14px] truncate">{c.title}</p>
-                        <p className="text-[12px] text-[#44474f]">{c.code} • {c.semester}</p>
-                      </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${c.status === 'active' ? 'bg-[#a0f3d4] text-[#00513e]' : 'bg-[#f0eded] text-[#44474f]'}`}>
-                        {c.status}
-                      </span>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
           )}
         </div>
       </div>
+
+      {/* WASSCE Results Editor Modal */}
+      {showWassceModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4" onClick={() => setShowWassceModal(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-4 bg-[#03224d] text-white flex items-center justify-between">
+              <h3 className="font-bold text-[15px]">Record WASSCE Entry Qualification</h3>
+              <button onClick={() => setShowWassceModal(false)} className="p-1 hover:bg-white/20 rounded-full text-white">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveWassce} className="p-6 overflow-y-auto space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-[#44474f] uppercase tracking-wider mb-1">Index Number</label>
+                  <input
+                    type="text"
+                    required
+                    value={wassceForm.indexNumber}
+                    onChange={e => setWassceForm(p => ({ ...p, indexNumber: e.target.value }))}
+                    className="w-full border border-[#c4c6d0] rounded-lg px-3 py-2 text-[14px] font-mono focus:outline-none focus:border-[#03224d]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-[#44474f] uppercase tracking-wider mb-1">Exam Year</label>
+                  <input
+                    type="number"
+                    required
+                    min={1990}
+                    max={2030}
+                    value={wassceForm.examYear}
+                    onChange={e => setWassceForm(p => ({ ...p, examYear: Number(e.target.value) }))}
+                    className="w-full border border-[#c4c6d0] rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:border-[#03224d]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-[#44474f] uppercase tracking-wider mb-1">Exam Center / School Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Albert Academy, Freetown"
+                  value={wassceForm.examCenter}
+                  onChange={e => setWassceForm(p => ({ ...p, examCenter: e.target.value }))}
+                  className="w-full border border-[#c4c6d0] rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:border-[#03224d]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-[#44474f] uppercase tracking-wider mb-2">Subject Grades (WASSCE Scale A1 – F9)</label>
+                <div className="space-y-2">
+                  {wassceForm.subjects.map((sub, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Subject name"
+                        value={sub.subject}
+                        onChange={e => {
+                          const val = e.target.value
+                          setWassceForm(p => {
+                            const updated = [...p.subjects]
+                            updated[idx].subject = val
+                            return { ...p, subjects: updated }
+                          })
+                        }}
+                        className="flex-1 border border-[#c4c6d0] rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-[#03224d]"
+                      />
+                      <select
+                        value={sub.grade}
+                        onChange={e => {
+                          const val = e.target.value
+                          setWassceForm(p => {
+                            const updated = [...p.subjects]
+                            updated[idx].grade = val
+                            return { ...p, subjects: updated }
+                          })
+                        }}
+                        className="border border-[#c4c6d0] rounded-lg px-3 py-2 text-[13px] font-bold focus:outline-none focus:border-[#03224d]"
+                      >
+                        {['A1', 'B2', 'B3', 'C4', 'C5', 'C6', 'D7', 'E8', 'F9'].map(g => (
+                          <option key={g} value={g}>{g}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-[#c4c6d0] flex justify-end gap-3">
+                <button type="button" onClick={() => setShowWassceModal(false)} className="px-4 py-2 border border-[#c4c6d0] rounded-xl text-[12px] font-bold text-[#44474f]">
+                  Cancel
+                </button>
+                <button type="submit" disabled={savingWassce} className="bg-[#03224d] text-white px-5 py-2 rounded-xl text-[12px] font-bold hover:opacity-90 disabled:opacity-50">
+                  {savingWassce ? 'Saving…' : 'Save WASSCE Qualification'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </AppLayout>
   )
 }

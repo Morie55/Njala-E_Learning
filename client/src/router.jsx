@@ -1,63 +1,78 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { useUser } from './hooks/useUser'
 import LoadingSkeleton from './components/ui/LoadingSkeleton'
 import api from './lib/api'
 
-// Auth
-import LandingPage from './pages/LandingPage'
-import SignIn from './pages/auth/SignIn'
-import SignUp from './pages/auth/SignUp'
-import ActivateAccount from './pages/auth/ActivateAccount'
+// Fallback loader component for lazy-loaded routes
+function PageLoader() {
+  return (
+    <div className="p-6 max-w-5xl mx-auto">
+      <LoadingSkeleton type="card" count={3} />
+    </div>
+  )
+}
+
+// Lazy-loaded page components for optimal bundle code-splitting
+const LandingPage = lazy(() => import('./pages/LandingPage'))
+const SignIn = lazy(() => import('./pages/auth/SignIn'))
+const SignUp = lazy(() => import('./pages/auth/SignUp'))
+const ActivateAccount = lazy(() => import('./pages/auth/ActivateAccount'))
 
 // Student
-import StudentDashboard from './pages/student/Dashboard'
-import MyCourses from './pages/student/MyCourses'
-import BrowseCourses from './pages/student/BrowseCourses'
-import CourseDetail from './pages/student/CourseDetail'
-import AssignmentSubmission from './pages/student/AssignmentSubmission'
-import StudentAssignments from './pages/student/Assignments'
-import Grades from './pages/student/Grades'
-import Profile from './pages/student/Profile'
+const StudentDashboard = lazy(() => import('./pages/student/Dashboard'))
+const MyCourses = lazy(() => import('./pages/student/MyCourses'))
+const BrowseCourses = lazy(() => import('./pages/student/BrowseCourses'))
+const CourseDetail = lazy(() => import('./pages/student/CourseDetail'))
+const AssignmentSubmission = lazy(() => import('./pages/student/AssignmentSubmission'))
+const StudentAssignments = lazy(() => import('./pages/student/Assignments'))
+const Grades = lazy(() => import('./pages/student/Grades'))
+const Profile = lazy(() => import('./pages/student/Profile'))
+const StudentAttendance = lazy(() => import('./pages/student/Attendance'))
+const StudentProgress = lazy(() => import('./pages/student/Progress'))
+const StudentPayments = lazy(() => import('./pages/student/Payments'))
+const CertificatePage = lazy(() => import('./pages/student/CertificatePage'))
+const TakeQuiz = lazy(() => import('./pages/student/TakeQuiz'))
 
 // Lecturer
-import LecturerDashboard from './pages/lecturer/Dashboard'
-import CourseManagement from './pages/lecturer/CourseManagement'
-import EnrolledStudents from './pages/lecturer/EnrolledStudents'
-import CourseAssignments from './pages/lecturer/CourseAssignments'
-import CreateAssignment from './pages/lecturer/CreateAssignment'
-import GradeSubmissions from './pages/lecturer/GradeSubmissions'
-import UploadMaterial from './pages/lecturer/UploadMaterial'
-import PostAnnouncement from './pages/lecturer/PostAnnouncement'
-import LecturerSettings from './pages/lecturer/LecturerSettings'
+const LecturerDashboard = lazy(() => import('./pages/lecturer/Dashboard'))
+const CourseManagement = lazy(() => import('./pages/lecturer/CourseManagement'))
+const EnrolledStudents = lazy(() => import('./pages/lecturer/EnrolledStudents'))
+const CourseAssignments = lazy(() => import('./pages/lecturer/CourseAssignments'))
+const CreateAssignment = lazy(() => import('./pages/lecturer/CreateAssignment'))
+const GradeSubmissions = lazy(() => import('./pages/lecturer/GradeSubmissions'))
+const UploadMaterial = lazy(() => import('./pages/lecturer/UploadMaterial'))
+const PostAnnouncement = lazy(() => import('./pages/lecturer/PostAnnouncement'))
+const LecturerSettings = lazy(() => import('./pages/lecturer/LecturerSettings'))
+const AttendanceTracker = lazy(() => import('./pages/lecturer/AttendanceTracker'))
+const CourseReport = lazy(() => import('./pages/lecturer/CourseReport'))
+const CreateQuiz = lazy(() => import('./pages/lecturer/CreateQuiz'))
 
 // Dept Head
-import DeptDashboard from './pages/depthead/Dashboard'
-import CourseOversight from './pages/depthead/CourseOversight'
-import DeptHeadSettings from './pages/depthead/DeptHeadSettings'
+const DeptDashboard = lazy(() => import('./pages/depthead/Dashboard'))
+const CourseOversight = lazy(() => import('./pages/depthead/CourseOversight'))
+const DeptHeadSettings = lazy(() => import('./pages/depthead/DeptHeadSettings'))
+const DepartmentReport = lazy(() => import('./pages/admin/DepartmentReport'))
 
 // Admin
-import AdminDashboard from './pages/admin/Dashboard'
-import UserManagement from './pages/admin/UserManagement'
-import BulkImportUsers from './pages/admin/BulkImportUsers'
-import SchoolManagement from './pages/admin/SchoolManagement'
-import DepartmentManagement from './pages/admin/DepartmentManagement'
-import SystemSettings from './pages/admin/SystemSettings'
-import Analytics from './pages/admin/Analytics'
-import AuditLogs from './pages/admin/AuditLogs'
+const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'))
+const UserManagement = lazy(() => import('./pages/admin/UserManagement'))
+const BulkImportUsers = lazy(() => import('./pages/admin/BulkImportUsers'))
+const SchoolManagement = lazy(() => import('./pages/admin/SchoolManagement'))
+const DepartmentManagement = lazy(() => import('./pages/admin/DepartmentManagement'))
+const SystemSettings = lazy(() => import('./pages/admin/SystemSettings'))
+const Analytics = lazy(() => import('./pages/admin/Analytics'))
+const AuditLogs = lazy(() => import('./pages/admin/AuditLogs'))
+const PaymentManagement = lazy(() => import('./pages/admin/PaymentManagement'))
+const AcademicCalendar = lazy(() => import('./pages/admin/AcademicCalendar'))
 
-// New pages (Phase 3)
-import AttendanceTracker from './pages/lecturer/AttendanceTracker'
-import StudentAttendance from './pages/student/Attendance'
-import CourseReport from './pages/lecturer/CourseReport'
-import DiscussionBoard from './pages/shared/DiscussionBoard'
-import DiscussionPost from './pages/shared/DiscussionPost'
-import StudentProgress from './pages/student/Progress'
-import StudentPayments from './pages/student/Payments'
-import CertificatePage from './pages/student/CertificatePage'
-import DepartmentReport from './pages/admin/DepartmentReport'
-import PaymentManagement from './pages/admin/PaymentManagement'
+// Shared & Alumni
+const DiscussionBoard = lazy(() => import('./pages/shared/DiscussionBoard'))
+const DiscussionPost = lazy(() => import('./pages/shared/DiscussionPost'))
+const Timetable = lazy(() => import('./pages/shared/Timetable'))
+const Messages = lazy(() => import('./pages/shared/Messages'))
+const AlumniDashboard = lazy(() => import('./pages/alumni/Dashboard'))
 
 /** Requires Clerk sign-in. Redirects to /sign-in if not authenticated. */
 function RequireAuth({ children }) {
@@ -69,89 +84,90 @@ function RequireAuth({ children }) {
 
 /** Requires specific role(s). Redirects to /dashboard if wrong role. */
 function RequireRole({ allowedRoles, children }) {
-  const { role, isLoaded } = useUser()
-  if (!isLoaded) return <div className="flex items-center justify-center min-h-screen"><LoadingSkeleton type="card" count={4} /></div>
-  if (!role) return null
+  const { role, loading } = useUser()
+  if (loading) return <div className="flex items-center justify-center min-h-screen"><LoadingSkeleton type="card" count={4} /></div>
   if (!allowedRoles.includes(role)) return <Navigate to="/dashboard" replace />
   return children
 }
 
-/** Redirects to the role-appropriate dashboard after sign-in */
+/** Polymorphic /dashboard route — renders the role-appropriate dashboard. */
 function RoleDashboard() {
-  const { role, isLoaded } = useUser()
-
-  if (!isLoaded) return <div className="flex items-center justify-center min-h-screen"><LoadingSkeleton type="card" count={4} /></div>
-  if (role === 'student')   return <StudentDashboard />
-  if (role === 'lecturer')  return <LecturerDashboard />
+  const { role, dbUser } = useUser()
+  if (dbUser?.status === 'pending_activation') return <Navigate to="/activate" replace />
+  if (role === 'admin') return <AdminDashboard />
   if (role === 'dept_head') return <DeptDashboard />
-  if (role === 'admin')     return <AdminDashboard />
-
-  return (
-    <div className="min-h-screen bg-[#fbf9f8] flex items-center justify-center p-6 text-center">
-      <div className="bg-white border border-[#c4c6d0] rounded-xl p-8 max-w-lg shadow-lg">
-        <div className="w-14 h-14 bg-[#1f3864]/10 rounded-full flex items-center justify-center mx-auto mb-3 text-[#03224d]">
-          <span className="material-symbols-outlined text-3xl">account_circle</span>
-        </div>
-        <h2 className="text-[24px] font-bold text-[#03224d] mb-2">Account Role Pending</h2>
-        <p className="text-[14px] text-[#44474f] mb-4">Your account is synced, but your assigned portal role is pending approval.</p>
-        <p className="text-[12px] text-[#74777f]">Please contact an administrator if you require lecturer or department head permissions.</p>
-      </div>
-    </div>
-  )
+  if (role === 'lecturer') return <LecturerDashboard />
+  if (role === 'alumni') return <AlumniDashboard />
+  return <StudentDashboard />
 }
 
-/** Polymorphic courses page based on user role */
+/** Polymorphic /courses route — student sees MyCourses, lecturer sees CourseManagement. */
 function CoursesPage() {
-  const { role, isLoaded } = useUser()
-  if (!isLoaded) return <div className="flex items-center justify-center min-h-screen"><LoadingSkeleton type="card" count={4} /></div>
+  const { role } = useUser()
   if (role === 'student') return <MyCourses />
-  return <CourseManagement />
+  if (role === 'lecturer') return <CourseManagement />
+  if (role === 'dept_head') return <CourseOversight />
+  return <MyCourses />
 }
 
-/** Polymorphic settings page based on user role */
+/** Polymorphic /settings route. */
 function SettingsPage() {
-  const { role, isLoaded } = useUser()
-  if (!isLoaded) return <div className="flex items-center justify-center min-h-screen"><LoadingSkeleton type="card" count={4} /></div>
-  if (role === 'student') return <Profile />
-  if (role === 'lecturer') return <LecturerSettings />
+  const { role } = useUser()
+  if (role === 'admin') return <SystemSettings />
   if (role === 'dept_head') return <DeptHeadSettings />
-  return <SystemSettings />
+  if (role === 'lecturer') return <LecturerSettings />
+  return <Navigate to="/dashboard" replace />
 }
 
+/** Error boundary component for routes */
 function RootErrorBoundary() {
   return (
-    <div className="min-h-screen bg-[#fbf9f8] flex items-center justify-center p-6 text-center">
-      <div className="bg-white border border-[#c4c6d0] rounded-xl p-8 max-w-md shadow-sm">
-        <div className="w-16 h-16 bg-[#ffdad6] rounded-full flex items-center justify-center mx-auto mb-4 text-[#93000a]">
-          <span className="material-symbols-outlined text-3xl">error_outline</span>
+    <div className="min-h-screen flex items-center justify-center p-6 bg-[#fbf9f8]">
+      <div className="bg-white border border-[#c4c6d0] rounded-xl p-8 max-w-md shadow-lg text-center">
+        <div className="w-16 h-16 bg-[#ba1a1a]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+          <span className="material-symbols-outlined text-3xl text-[#ba1a1a]">warning</span>
         </div>
-        <h2 className="text-[24px] font-bold text-[#03224d] mb-2">Page Not Found</h2>
-        <p className="text-[14px] text-[#44474f] mb-6">The requested page does not exist or you do not have permission to view it.</p>
-        <a href="/dashboard" className="inline-block bg-[#03224d] text-white px-6 py-2.5 rounded text-[14px] font-bold hover:opacity-90 transition-opacity">
+        <h2 className="text-[20px] font-bold text-[#03224d] mb-2">Something went wrong</h2>
+        <p className="text-[14px] text-[#44474f] mb-6">An error occurred while loading this section.</p>
+        <button
+          onClick={() => window.location.href = '/dashboard'}
+          className="bg-[#03224d] text-white px-6 py-2.5 rounded text-[13px] font-bold hover:opacity-90 transition-opacity"
+        >
           Return to Dashboard
-        </a>
+        </button>
       </div>
     </div>
   )
-}
-
-/** Root route handler: shows LandingPage for guests, redirects to /dashboard for signed-in users */
-function RootRoute() {
-  const { isSignedIn, isLoaded } = useAuth()
-  if (!isLoaded) return <div className="flex items-center justify-center min-h-screen"><LoadingSkeleton type="card" count={4} /></div>
-  if (isSignedIn) return <Navigate to="/dashboard" replace />
-  return <LandingPage />
 }
 
 const router = createBrowserRouter([
-  { path: '/',         element: <RootRoute /> },
-  { path: '/sign-in',  element: <SignIn /> },
-  { path: '/sign-up',  element: <SignUp /> },
-  { path: '/activate', element: <RequireAuth><ActivateAccount /></RequireAuth> },
+  {
+    path: '/',
+    element: <Suspense fallback={<PageLoader />}><LandingPage /></Suspense>,
+    errorElement: <RootErrorBoundary />,
+  },
+  {
+    path: '/sign-in/*',
+    element: <Suspense fallback={<PageLoader />}><SignIn /></Suspense>,
+  },
+  {
+    path: '/sign-up/*',
+    element: <Suspense fallback={<PageLoader />}><SignUp /></Suspense>,
+  },
+  {
+    path: '/activate',
+    element: <RequireAuth><Suspense fallback={<PageLoader />}><ActivateAccount /></Suspense></RequireAuth>,
+  },
 
   {
     path: '/*',
-    element: <RequireAuth><Outlet /></RequireAuth>,
+    element: (
+      <RequireAuth>
+        <Suspense fallback={<PageLoader />}>
+          <Outlet />
+        </Suspense>
+      </RequireAuth>
+    ),
     errorElement: <RootErrorBoundary />,
     children: [
       { path: 'dashboard', element: <RoleDashboard /> },
@@ -199,6 +215,16 @@ const router = createBrowserRouter([
       { path: 'audit-logs',         element: <RequireRole allowedRoles={['admin']}><AuditLogs /></RequireRole> },
       { path: 'dept-report',        element: <RequireRole allowedRoles={['admin','dept_head']}><DepartmentReport /></RequireRole> },
       { path: 'payments',           element: <RequireRole allowedRoles={['admin']}><PaymentManagement /></RequireRole> },
+      { path: 'academic-calendar',  element: <RequireRole allowedRoles={['admin']}><AcademicCalendar /></RequireRole> },
+
+      // ── Shared Phase 5 ──
+      { path: 'timetable',          element: <Timetable /> },
+      { path: 'messages',           element: <Messages /> },
+
+      // ── Quiz & Alumni Phase 5 ──
+      { path: 'quizzes/create',     element: <RequireRole allowedRoles={['lecturer','admin']}><CreateQuiz /></RequireRole> },
+      { path: 'quizzes/:id/take',   element: <RequireRole allowedRoles={['student']}><TakeQuiz /></RequireRole> },
+      { path: 'alumni/dashboard',   element: <RequireRole allowedRoles={['alumni','student','admin']}><AlumniDashboard /></RequireRole> },
     ],
   },
 ])
