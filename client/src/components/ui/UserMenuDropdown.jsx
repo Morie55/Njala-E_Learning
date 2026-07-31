@@ -65,9 +65,8 @@ export default function UserMenuDropdown({ user, role, onClose }) {
           {email && <p className="text-[12px] text-[#44474f] truncate">{email}</p>}
           {role && (
             <span
-              className={`mt-1 text-[9px] font-bold px-2 py-0.5 rounded tracking-wide uppercase inline-block ${
-                ROLE_BADGES[role]?.class ?? 'bg-[#e4e2e1] text-[#44474f]'
-              }`}
+              className={`mt-1 text-[9px] font-bold px-2 py-0.5 rounded tracking-wide uppercase inline-block ${ROLE_BADGES[role]?.class ?? 'bg-[#e4e2e1] text-[#44474f]'
+                }`}
             >
               {ROLE_BADGES[role]?.label ?? role}
             </span>

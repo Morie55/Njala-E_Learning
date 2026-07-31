@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../../lib/api'
+import AppLayout from '../../components/layout/AppLayout'
+import { useUser } from '../../hooks/useUser'
 
 const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
 const fmtInput = (d) => d ? new Date(d).toISOString().slice(0, 10) : ''
@@ -10,6 +12,7 @@ const EMPTY = {
 }
 
 export default function AcademicCalendar() {
+  const { role } = useUser()
   const [periods, setPeriods] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -65,6 +68,7 @@ export default function AcademicCalendar() {
   const now = new Date()
 
   return (
+    <AppLayout role={role}>
     <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6">
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg text-white text-[13px] font-bold ${toast.type === 'error' ? 'bg-[#ba1a1a]' : 'bg-[#086b53]'}`}>
@@ -220,5 +224,6 @@ export default function AcademicCalendar() {
         </div>
       )}
     </div>
+    </AppLayout>
   )
 }
