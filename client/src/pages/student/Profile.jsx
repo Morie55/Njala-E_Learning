@@ -38,13 +38,20 @@ export default function Profile() {
     ? new Date(dbUser.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
     : '—'
 
+  const isStudent = dbUser?.role === 'student'
+
   useEffect(() => {
+    if (!dbUser) return
     Promise.all([
-      api.get('/courses?enrolled=true').catch(() => ({ data: { courses: [] } })),
-      dbUser?.role === 'student'
+      isStudent
+        ? api.get('/courses?enrolled=true').catch(() => ({ data: { courses: [] } }))
+        : Promise.resolve({ data: { courses: [] } }),
+      isStudent
         ? api.get('/submissions/gpa').catch(() => ({ data: null }))
         : Promise.resolve({ data: null }),
-      api.get('/wassce/me').catch(() => ({ data: { qualification: null } })),
+      isStudent
+        ? api.get('/wassce/me').catch(() => ({ data: { qualification: null } }))
+        : Promise.resolve({ data: { qualification: null } }),
     ]).then(([cRes, gRes, wRes]) => {
       setEnrollments(cRes.data?.courses ?? [])
       setGpa(gRes.data)
@@ -191,7 +198,8 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* WASSCE Entry Qualification Result Slip Card */}
+          {/* WASSCE Entry Qualification Result Slip Card — students only */}
+          {isStudent && (
           <div className="bg-white border border-[#c4c6d0] rounded-xl p-6 shadow-xs">
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
               <div>
@@ -281,9 +289,10 @@ export default function Profile() {
               </div>
             )}
           </div>
+          )}
 
           {/* Enrolled Courses & Progress Bars */}
-          {dbUser?.role === 'student' && (
+          {isStudent && (
             <div className="bg-white border border-[#c4c6d0] rounded-xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-[18px] font-semibold text-[#03224d] flex items-center gap-2">

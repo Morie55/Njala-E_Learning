@@ -185,7 +185,7 @@ const router = createBrowserRouter([
         element: <RequireRole allowedRoles={['student']}><AssignmentSubmission /></RequireRole>,
       },
       { path: 'grades',        element: <RequireRole allowedRoles={['student']}><Grades /></RequireRole> },
-      { path: 'profile',       element: <RequireRole allowedRoles={['student']}><Profile /></RequireRole> },
+      { path: 'profile',       element: <Profile /> },
       { path: 'attendance',    element: <RequireRole allowedRoles={['student']}><StudentAttendance /></RequireRole> },
       { path: 'progress',      element: <RequireRole allowedRoles={['student']}><StudentProgress /></RequireRole> },
       { path: 'payments',      element: <RequireRole allowedRoles={['student']}><StudentPayments /></RequireRole> },
