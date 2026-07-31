@@ -9,6 +9,15 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:4000',
         changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on('error', (err, _req, res) => {
+            if (err.code === 'ECONNRESET' || err.code === 'ECONNREFUSED') {
+              if (res.headersSent) return
+              res.writeHead(502, { 'Content-Type': 'application/json' })
+              res.end(JSON.stringify({ error: 'Backend server restarting or unavailable.' }))
+            }
+          })
+        },
       },
     },
   },

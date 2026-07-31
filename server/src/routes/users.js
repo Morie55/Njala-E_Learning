@@ -124,11 +124,15 @@ router.get('/me', requireAuth, populateUser, (req, res) => {
  * GET /api/v1/users  [Admin only] — Filter active/non-deleted users
  */
 router.get('/', requireAuth, populateUser, async (req, res, next) => {
-  if (req.dbUser.role !== 'admin') return res.status(403).json({ error: 'Admin only' })
+  if (!['admin', 'dept_head'].includes(req.dbUser.role)) return res.status(403).json({ error: 'Forbidden' })
   try {
     const page = parseInt(req.query.page) || 1
     const limit = parseInt(req.query.limit) || 100
     const filter = { deletedAt: null }
+
+    if (req.query.role) {
+      filter.role = req.query.role
+    }
 
     if (req.query.status && ['PENDING', 'ACTIVE', 'SUSPENDED', 'ALUMNI', 'ARCHIVED'].includes(req.query.status.toUpperCase())) {
       filter.status = req.query.status.toUpperCase()
@@ -155,6 +159,17 @@ router.patch('/:id/role', requireAuth, populateUser, validateBody(updateUserRole
     if (!previousUser) return res.status(404).json({ error: 'User not found' })
 
     const user = await User.findByIdAndUpdate(req.params.id, { role: req.body.role }, { returnDocument: 'after' })
+
+    if (user.clerkId && process.env.CLERK_SECRET_KEY) {
+      try {
+        const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
+        await clerk.users.updateUser(user.clerkId, {
+          publicMetadata: { role: req.body.role },
+        })
+      } catch (clerkErr) {
+        console.warn('[CLERK ROLE SYNC WARN]', clerkErr.message)
+      }
+    }
 
     await logAudit({
       req,

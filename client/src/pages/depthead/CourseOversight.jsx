@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useUser } from '../../hooks/useUser'
 import AppLayout from '../../components/layout/AppLayout'
 import DataTable from '../../components/ui/DataTable'
 import StatusBadge from '../../components/ui/StatusBadge'
@@ -6,6 +7,7 @@ import LoadingSkeleton from '../../components/ui/LoadingSkeleton'
 import api from '../../lib/api'
 
 export default function CourseOversight() {
+  const { role: userRole } = useUser()
   const [activeTab, setActiveTab] = useState('pending') // 'pending' | 'workload' | 'announcements' | 'enrollment'
 
   // Data states
@@ -130,7 +132,7 @@ export default function CourseOversight() {
   }
 
   return (
-    <AppLayout role="dept_head">
+    <AppLayout role={userRole ?? 'dept_head'}>
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl text-white text-[13px] font-bold shadow-lg ${toast.type === 'error' ? 'bg-[#ba1a1a]' : 'bg-[#086b53]'}`}>
           {toast.msg}
