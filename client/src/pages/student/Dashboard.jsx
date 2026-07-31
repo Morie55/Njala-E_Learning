@@ -30,7 +30,7 @@ export default function StudentDashboard() {
         setActivePeriod(p.data?.period ?? null)
         setGpaData(g.data)
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false))
   }, [])
 
@@ -130,9 +130,6 @@ export default function StudentDashboard() {
       {!loading && courses.length === 0 && (
         <div className="mb-8 bg-gradient-to-r from-[#03224d] to-[#1f3864] text-white rounded-2xl p-8 shadow-xl relative overflow-hidden">
           <div className="relative z-10 max-w-xl space-y-4">
-            <span className="bg-[#a0f3d4] text-[#002117] text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
-              🚀 Getting Started
-            </span>
             <h3 className="text-[26px] font-black leading-tight">Welcome to Njala E-Learning Portal!</h3>
             <p className="text-[14px] text-white/80 leading-relaxed">
               You are not enrolled in any active courses yet. Browse Njala University's course catalog to enroll, access lecture materials, submit assignments, and participate in discussions.
