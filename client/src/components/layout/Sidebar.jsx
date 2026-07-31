@@ -12,6 +12,8 @@ const NAV = {
     { icon: 'assignment', label: 'Assignments', path: '/assignments' },
     { icon: 'grade', label: 'Grades', path: '/grades' },
     { icon: 'event_available', label: 'Attendance', path: '/attendance' },
+    { icon: 'bar_chart', label: 'My Progress', path: '/progress' },
+    { icon: 'payments', label: 'Fee Payments', path: '/payments' },
     { icon: 'person', label: 'Profile', path: '/profile' },
   ],
   lecturer: [
@@ -23,6 +25,7 @@ const NAV = {
   dept_head: [
     { icon: 'dashboard', label: 'Dashboard', path: '/dashboard' },
     { icon: 'manage_search', label: 'Course Oversight', path: '/oversight' },
+    { icon: 'summarize', label: 'Dept Report', path: '/dept-report' },
     { icon: 'settings', label: 'Settings', path: '/settings' },
   ],
   admin: [
@@ -31,6 +34,8 @@ const NAV = {
     { icon: 'account_balance', label: 'Schools', path: '/schools' },
     { icon: 'business', label: 'Departments', path: '/departments' },
     { icon: 'bar_chart', label: 'Analytics', path: '/analytics' },
+    { icon: 'summarize', label: 'Dept Report', path: '/dept-report' },
+    { icon: 'payments', label: 'Payments', path: '/payments' },
     { icon: 'manage_search', label: 'Audit Logs', path: '/audit-logs' },
     { icon: 'settings', label: 'Settings', path: '/settings' },
   ],

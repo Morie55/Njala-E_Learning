@@ -9,6 +9,7 @@ import Notification from '../models/Notification.js'
 import User from '../models/User.js'
 import { logAudit } from '../utils/auditLogger.js'
 import { calculateGrade } from '../utils/grading.js'
+import { sendMail, templates } from '../utils/mailer.js'
 
 const router = Router()
 const auth = [requireAuth, populateUser, enforceStatus]
@@ -210,7 +211,7 @@ router.patch('/:id/grade', ...auth, async (req, res, next) => {
     sub.gradedAt = new Date()
     await sub.save()
 
-    // Populate student user to dispatch notification
+    // Populate student user to dispatch notification + email
     const student = await User.findById(sub.studentId).lean()
     if (student) {
       await Notification.create({
@@ -221,6 +222,19 @@ router.patch('/:id/grade', ...auth, async (req, res, next) => {
         type: 'grade',
         link: '/grades',
       })
+      // Send email receipt
+      if (student.email) {
+        const courseName = sub.assignmentId?.courseId?.title ?? 'your course'
+        const tmpl = templates.gradePosted(
+          student.fullName,
+          courseName,
+          sub.assignmentId?.title ?? 'Assignment',
+          score,
+          max,
+          `${process.env.CLIENT_URL || 'http://localhost:5173'}/grades`
+        )
+        sendMail({ to: student.email, ...tmpl }).catch(() => {})
+      }
     }
 
     await logAudit({

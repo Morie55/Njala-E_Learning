@@ -365,4 +365,63 @@ router.get('/report/course/:id', ...auth, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+/** GET /api/v1/admin/report/department/:id — Dept-level aggregate report */
+router.get('/report/department/:id', ...auth, async (req, res, next) => {
+  const { role } = req.dbUser
+  if (!['dept_head', 'admin'].includes(role)) return res.status(403).json({ error: 'Forbidden' })
+  try {
+    const dept = await Department.findById(req.params.id).populate('schoolId', 'name code').lean()
+    if (!dept) return res.status(404).json({ error: 'Department not found' })
+
+    // Get all courses in dept
+    const courses = await Course.find({ departmentId: dept._id })
+      .populate('lecturerId', 'fullName email')
+      .lean()
+    const courseIds = courses.map(c => c._id)
+
+    // Enrollments per course
+    const enrollmentCounts = await Enrollment.aggregate([
+      { $match: { courseId: { $in: courseIds }, status: 'active' } },
+      { $group: { _id: '$courseId', count: { $sum: 1 } } },
+    ])
+    const enrollMap = {}
+    enrollmentCounts.forEach(e => { enrollMap[e._id.toString()] = e.count })
+
+    const coursesEnriched = courses.map(c => ({
+      ...c,
+      enrollmentCount: enrollMap[c._id.toString()] ?? 0,
+    }))
+
+    // Total unique students enrolled in this department
+    const totalEnrollments = await Enrollment.distinct('studentId', {
+      courseId: { $in: courseIds },
+      status: 'active',
+    })
+
+    // Total lecturers
+    const totalLecturers = await User.countDocuments({ departmentId: dept._id, role: 'lecturer' })
+
+    // Submissions
+    const assignmentIds = await Assignment.find({ courseId: { $in: courseIds } }).distinct('_id')
+    const submissions = await Submission.find({ assignmentId: { $in: assignmentIds } }).lean()
+    const graded = submissions.filter(s => s.score !== null && s.score !== undefined)
+    const avgScore = graded.length > 0
+      ? Math.round(graded.reduce((sum, s) => sum + s.score, 0) / graded.length)
+      : null
+
+    res.json({
+      department: { ...dept, schoolId: undefined, _id: dept._id, name: dept.name, code: dept.code },
+      school: dept.schoolId,
+      totalStudents: totalEnrollments.length,
+      totalLecturers,
+      totalCourses: courses.length,
+      activeCourses: courses.filter(c => c.status === 'active').length,
+      totalSubmissions: submissions.length,
+      gradedSubmissions: graded.length,
+      avgScore,
+      courses: coursesEnriched,
+    })
+  } catch (err) { next(err) }
+})
+
 export default router

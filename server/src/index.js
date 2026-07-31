@@ -18,6 +18,8 @@ import departmentRoutes from './routes/departments.js'
 import adminRoutes from './routes/admin.js'
 import notificationRoutes from './routes/notifications.js'
 import attendanceRoutes from './routes/attendance.js'
+import discussionRoutes from './routes/discussions.js'
+import paymentRoutes from './routes/payments.js'
 
 // Middleware & Script imports
 import { enforceStatus } from './middleware/enforceStatus.js'
@@ -70,6 +72,8 @@ app.use('/api/v1/departments', departmentRoutes)
 app.use('/api/v1/admin', adminRoutes)
 app.use('/api/v1/notifications', notificationRoutes)
 app.use('/api/v1/attendance', attendanceRoutes)
+app.use('/api/v1/discussions', discussionRoutes)
+app.use('/api/v1/payments', paymentRoutes)
 
 // Health check
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }))

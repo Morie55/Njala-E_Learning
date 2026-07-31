@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useUser as useClerkUser } from '@clerk/clerk-react'
 import { useUser } from '../../hooks/useUser'
+import { useDarkMode } from '../../hooks/useDarkMode'
 import NotificationDropdown from '../ui/NotificationDropdown'
 import AppsDropdown from '../ui/AppsDropdown'
 import UserMenuDropdown from '../ui/UserMenuDropdown'
@@ -16,6 +17,7 @@ const ROLE_BADGES = {
 export default function TopBar({ onMobileToggle, onSearch }) {
   const { user } = useClerkUser()
   const { role } = useUser()
+  const { isDark, toggle: toggleDark } = useDarkMode()
   const [notifOpen, setNotifOpen] = useState(false)
   const [appsOpen, setAppsOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -101,6 +103,18 @@ export default function TopBar({ onMobileToggle, onSearch }) {
           </button>
           {appsOpen && <AppsDropdown onClose={() => setAppsOpen(false)} />}
         </div>
+
+        {/* Dark Mode Toggle */}
+        <button
+          onClick={toggleDark}
+          className="p-2 text-[#44474f] hover:bg-[#e4e2e1] rounded-full transition-all cursor-pointer active:scale-95"
+          aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          title={isDark ? 'Light mode' : 'Dark mode'}
+        >
+          <span className="material-symbols-outlined text-[22px] sm:text-[24px]">
+            {isDark ? 'light_mode' : 'dark_mode'}
+          </span>
+        </button>
 
         <div className="h-6 sm:h-8 w-px bg-[#c4c6d0] mx-0.5 sm:mx-2" />
 

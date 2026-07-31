@@ -4,6 +4,8 @@ import { populateUser } from '../middleware/populateUser.js'
 import { enforceStatus } from '../middleware/enforceStatus.js'
 import { validateBody } from '../middleware/validate.js'
 import { createCourseSchema, createAssignmentSchema } from '../utils/schemas.js'
+import { logAudit } from '../utils/auditLogger.js'
+import { sendMail, templates } from '../utils/mailer.js'
 import Course from '../models/Course.js'
 import Enrollment from '../models/Enrollment.js'
 import Assignment from '../models/Assignment.js'
@@ -281,6 +283,25 @@ router.post('/:id/assignments', ...auth, validateBody(createAssignmentSchema), a
 
     const assignment = await Assignment.create({ ...req.body, courseId: req.params.id, createdBy: _id })
     res.status(201).json(assignment)
+
+    // Notify enrolled students by email (fire-and-forget)
+    setImmediate(async () => {
+      try {
+        const enrollments = await Enrollment.find({ courseId: req.params.id, status: 'active' })
+          .populate('studentId', 'fullName email').lean()
+        for (const e of enrollments) {
+          if (!e.studentId?.email) continue
+          const tmpl = templates.assignmentCreated(
+            e.studentId.fullName,
+            course.title,
+            assignment.title,
+            assignment.dueDate,
+            `${process.env.CLIENT_URL || 'http://localhost:5173'}/assignments`
+          )
+          await sendMail({ to: e.studentId.email, ...tmpl })
+        }
+      } catch (e) { console.error('[mailer] Assignment notification failed:', e.message) }
+    })
   } catch (err) { next(err) }
 })
 

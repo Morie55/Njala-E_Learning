@@ -55,6 +55,20 @@ export default function CourseDetail() {
               <h2 className="text-[24px] font-semibold text-[#03224d] mb-1">{course.title}</h2>
               <p className="text-[14px] text-[#44474f]">{course.lecturerName ?? 'Lecturer TBA'} • {course.semester}</p>
             </div>
+            <div className="flex flex-wrap gap-2 items-start">
+              <Link
+                to={`/courses/${id}/discussions`}
+                className="flex items-center gap-1.5 px-3 py-2 border border-[#c4c6d0] rounded-lg text-[12px] font-bold text-[#03224d] hover:bg-[#f0eded] transition-colors"
+              >
+                <span className="material-symbols-outlined text-[16px]">forum</span> Discussions
+              </Link>
+              <Link
+                to={`/courses/${id}/certificate`}
+                className="flex items-center gap-1.5 px-3 py-2 border border-[#c8961a] rounded-lg text-[12px] font-bold text-[#7a5a00] hover:bg-[#fff8e1] transition-colors"
+              >
+                <span className="material-symbols-outlined text-[16px]">workspace_premium</span> Certificate
+              </Link>
+            </div>
           </div>
 
           {/* Tabs */}
