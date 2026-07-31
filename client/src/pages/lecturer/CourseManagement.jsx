@@ -107,12 +107,12 @@ export default function CourseManagement() {
     <AppLayout role="lecturer">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-[32px] font-semibold text-[#03224d]">My Courses</h2>
-          <p className="text-[14px] text-[#44474f]">Manage your course portfolio across Njala Schools & Departments.</p>
+          <h2 className="text-[24px] sm:text-[32px] font-semibold text-[#03224d]">My Courses</h2>
+          <p className="text-[13px] sm:text-[14px] text-[#44474f]">Manage your course portfolio across Njala Schools & Departments.</p>
         </div>
         <button
           onClick={openCreate}
-          className="bg-[#03224d] text-white px-4 py-2 rounded text-[12px] font-bold hover:opacity-90 transition-opacity flex items-center gap-2 cursor-pointer"
+          className="w-full sm:w-auto justify-center bg-[#03224d] text-white px-4 py-2.5 sm:py-2 rounded text-[13px] sm:text-[12px] font-bold hover:opacity-90 transition-opacity flex items-center gap-2 cursor-pointer shrink-0"
         >
           <span className="material-symbols-outlined text-[18px]">add</span>
           New Course
@@ -121,8 +121,8 @@ export default function CourseManagement() {
 
       {deleteError && (
         <div className="mb-4 flex items-center gap-2 p-3 bg-[#ffdad6] border border-[#ba1a1a] rounded-lg">
-          <span className="material-symbols-outlined text-[18px] text-[#ba1a1a]">error</span>
-          <p className="text-[14px] text-[#ba1a1a] font-medium">{deleteError}</p>
+          <span className="material-symbols-outlined text-[18px] text-[#ba1a1a] shrink-0">error</span>
+          <p className="text-[13px] sm:text-[14px] text-[#ba1a1a] font-medium">{deleteError}</p>
         </div>
       )}
 
@@ -135,7 +135,7 @@ export default function CourseManagement() {
             rows={courses}
             emptyMessage="You haven't created any courses yet."
             actions={(row) => (
-              <>
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => navigate(`/courses/${row._id}/students`)}
                   className="text-[12px] font-bold text-[#086b53] hover:underline cursor-pointer"
@@ -166,13 +166,13 @@ export default function CourseManagement() {
                 >
                   Report
                 </button>
-                <button onClick={() => openEdit(row)} className="p-1 text-[#44474f] hover:text-[#03224d] cursor-pointer">
+                <button onClick={() => openEdit(row)} title="Edit course" className="p-1 text-[#44474f] hover:text-[#03224d] cursor-pointer">
                   <span className="material-symbols-outlined text-[18px]">edit</span>
                 </button>
-                <button onClick={() => handleDelete(row._id)} className="p-1 text-[#ba1a1a] hover:opacity-70 cursor-pointer">
+                <button onClick={() => handleDelete(row._id)} title="Archive course" className="p-1 text-[#ba1a1a] hover:opacity-70 cursor-pointer">
                   <span className="material-symbols-outlined text-[18px]">delete</span>
                 </button>
-              </>
+              </div>
             )}
           />
         )}
@@ -258,11 +258,18 @@ export default function CourseManagement() {
             </div>
 
             {error && <p className="text-[14px] text-[#ba1a1a]">{error}</p>}
-            <div className="flex gap-3 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setModal(null)}
+                className="w-full sm:w-auto px-5 py-2.5 border border-[#c4c6d0] text-[#44474f] rounded text-[14px] font-bold hover:bg-[#f0eded] justify-center cursor-pointer"
+              >
+                Cancel
+              </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="bg-[#03224d] text-white px-5 py-2.5 rounded text-[14px] font-bold hover:opacity-90 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                className="w-full sm:w-auto bg-[#03224d] text-white px-5 py-2.5 rounded text-[14px] font-bold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
               >
                 {saving ? (
                   <>
@@ -271,13 +278,6 @@ export default function CourseManagement() {
                 ) : (
                   'Save Course'
                 )}
-              </button>
-              <button
-                type="button"
-                onClick={() => setModal(null)}
-                className="px-5 py-2.5 border border-[#c4c6d0] text-[#44474f] rounded text-[14px] font-bold hover:bg-[#f0eded] cursor-pointer"
-              >
-                Cancel
               </button>
             </div>
           </form>
