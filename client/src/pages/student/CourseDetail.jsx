@@ -64,14 +64,13 @@ async function triggerDownload(rawUrl, title = 'Material_Download', materialType
     document.body.removeChild(a)
     setTimeout(() => URL.revokeObjectURL(blobUrl), 10000)
   } catch (err) {
-    console.error('Download failed, falling back to direct link:', err)
-    // Last resort: force Cloudinary's attachment flag and open directly.
-    // Won't always trigger a save dialog (see note above), but never leaves
-    // the user with nothing to click.
-    const fallbackUrl = url.includes('res.cloudinary.com') && url.includes('/upload/')
-      ? url.replace('/upload/', '/upload/fl_attachment/')
-      : url
-    window.open(fallbackUrl, '_blank', 'noopener,noreferrer')
+    console.error('Download failed, opening the file directly instead:', err)
+    // Last resort: open the plain, untransformed URL. Do NOT append Cloudinary's
+    // fl_attachment flag here — accounts created since mid-2024 have "Strict
+    // Transformations" enabled by default, which rejects any unsigned, on-the-fly
+    // transformation (fl_attachment included) with an HTTP 401. The plain delivery
+    // URL has no transformation applied, so it's always allowed.
+    window.open(url, '_blank', 'noopener,noreferrer')
   }
 }
 
