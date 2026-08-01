@@ -41,24 +41,19 @@ function buildDownloadFilename(title, rawUrl, materialType) {
   return alreadyHasExt || !existingExt ? base : `${base}.${existingExt}`
 }
 
-/** Robust File Download helper handling Cloudinary & cross-origin URLs */
+/** Robust File Download helper — always downloads via a same-origin Blob URL so
+ * the browser's `download` attribute is honored reliably. Relying on an <a download>
+ * pointed directly at a cross-origin URL (e.g. Cloudinary) is not dependable: several
+ * browsers ignore the `download` attribute for cross-origin hrefs and just navigate
+ * to the file instead, regardless of Cloudinary's fl_attachment flag. */
 async function triggerDownload(rawUrl, title = 'Material_Download', materialType = '') {
   const url = getFormattedUrl(rawUrl)
   if (!url) return
   const filename = buildDownloadFilename(title, url, materialType)
 
-  // 1. Cloudinary URLs: inject fl_attachment so the server responds with
-  // Content-Disposition: attachment. Browsers ignore a.download on cross-origin
-  // URLs, so we use window.open — the attachment header triggers the download dialog.
-  if (url.includes('res.cloudinary.com') && url.includes('/upload/')) {
-    const downloadUrl = url.replace('/upload/', '/upload/fl_attachment/')
-    window.open(downloadUrl, '_blank', 'noopener,noreferrer')
-    return
-  }
-
-  // 2. Cross-origin / direct URL: fetch blob fallback
   try {
     const res = await fetch(url)
+    if (!res.ok) throw new Error(`Download failed (${res.status})`)
     const blob = await res.blob()
     const blobUrl = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -68,9 +63,15 @@ async function triggerDownload(rawUrl, title = 'Material_Download', materialType
     a.click()
     document.body.removeChild(a)
     setTimeout(() => URL.revokeObjectURL(blobUrl), 10000)
-  } catch {
-    // 3. Direct window open fallback
-    window.open(url, '_blank', 'noopener,noreferrer')
+  } catch (err) {
+    console.error('Download failed, falling back to direct link:', err)
+    // Last resort: force Cloudinary's attachment flag and open directly.
+    // Won't always trigger a save dialog (see note above), but never leaves
+    // the user with nothing to click.
+    const fallbackUrl = url.includes('res.cloudinary.com') && url.includes('/upload/')
+      ? url.replace('/upload/', '/upload/fl_attachment/')
+      : url
+    window.open(fallbackUrl, '_blank', 'noopener,noreferrer')
   }
 }
 
