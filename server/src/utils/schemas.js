@@ -7,8 +7,12 @@ export const createCourseSchema = z.object({
   semester: z.string().optional(),
   status: z.enum(['draft', 'active', 'archived']).optional().default('draft'),
   credits: z.number().int().positive().optional().default(3),
-  schoolId: z.string().length(24, 'Invalid School ID').optional().nullable(),
-  departmentId: z.string().length(24, 'Invalid Department ID').optional().nullable(),
+  // Empty string from an unselected <select> must be treated as absent (null).
+  // Coerce '' → null before the length check so Zod doesn't reject the form.
+  schoolId: z.string().transform(v => v === '' ? null : v)
+    .pipe(z.string().length(24, 'Invalid School ID').nullable()).optional().nullable(),
+  departmentId: z.string().transform(v => v === '' ? null : v)
+    .pipe(z.string().length(24, 'Invalid Department ID').nullable()).optional().nullable(),
 })
 
 export const createAssignmentSchema = z.object({

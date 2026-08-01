@@ -47,17 +47,12 @@ async function triggerDownload(rawUrl, title = 'Material_Download', materialType
   if (!url) return
   const filename = buildDownloadFilename(title, url, materialType)
 
-  // 1. Cloudinary URLs: inject fl_attachment to force direct browser download
-  // Drop a.target='_blank' — combined with a.download on a cross-origin URL it is
-  // unreliable across browsers. fl_attachment already forces download via Content-Disposition.
+  // 1. Cloudinary URLs: inject fl_attachment so the server responds with
+  // Content-Disposition: attachment. Browsers ignore a.download on cross-origin
+  // URLs, so we use window.open — the attachment header triggers the download dialog.
   if (url.includes('res.cloudinary.com') && url.includes('/upload/')) {
     const downloadUrl = url.replace('/upload/', '/upload/fl_attachment/')
-    const a = document.createElement('a')
-    a.href = downloadUrl
-    a.download = filename
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
+    window.open(downloadUrl, '_blank', 'noopener,noreferrer')
     return
   }
 
@@ -119,10 +114,12 @@ function resolveViewerConfig(material) {
     return { mode: 'audio', url: rawUrl }
   }
 
-  // Direct PDF — Cloudinary categorises PDFs as an "image" resource and does
-  // append .pdf to the URL, but trust the material's own type regardless.
+  // PDF — route through Google Docs Viewer so the browser never has to embed the
+  // Cloudinary URL directly. Cloudinary sends X-Frame-Options headers that block
+  // cross-origin <object>/<iframe> embeds; Google fetches and re-serves the file
+  // in a way that can always be safely iframed.
   if (type === 'pdf' || lowerUrl.match(/\.pdf(\?.*)?$/)) {
-    return { mode: 'pdf', url: rawUrl }
+    return { mode: 'google_doc', url: `https://docs.google.com/viewer?url=${encodeURIComponent(rawUrl)}&embedded=true` }
   }
 
   // Slides / Office documents -> Google Docs Viewer.
@@ -131,12 +128,13 @@ function resolveViewerConfig(material) {
   // depend solely on the URL matching .doc/.docx/.ppt/.pptx/.xls/.xlsx. Trust the
   // material's own `type` (set at upload time) first.
   if (type === 'slides' || lowerUrl.match(/\.(doc|docx|ppt|pptx|xls|xlsx)(\?.*)?$/)) {
-    // Google Docs Viewer needs a recognizable extension to know how to render the
-    // file. Append one if the URL doesn't already end in a known office extension —
-    // Cloudinary will still serve the correct bytes with a format suffix appended.
+    // Microsoft Office Online Viewer is used instead of Google Docs Viewer because
+    // Google's crawler-based approach is blocked by Cloudinary's CDN, causing
+    // "No preview available". Microsoft's viewer fetches the file directly from the
+    // browser, so it reliably reaches Cloudinary raw-upload URLs.
     const hasOfficeExt = /\.(doc|docx|ppt|pptx|xls|xlsx)$/.test(rawUrl.split('?')[0])
     const viewableUrl = hasOfficeExt ? rawUrl : `${rawUrl}.pptx`
-    return { mode: 'google_doc', url: `https://docs.google.com/viewer?url=${encodeURIComponent(viewableUrl)}&embedded=true` }
+    return { mode: 'google_doc', url: `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(viewableUrl)}` }
   }
 
   // General Web Link / Webpage
@@ -448,20 +446,6 @@ export default function CourseDetail() {
                     <p className="text-white font-bold text-[16px]">{activeViewerMaterial.title}</p>
                     <audio src={config.url} controls className="w-full" autoPlay />
                   </div>
-                ) : config.mode === 'pdf' ? (
-                  <object data={config.url} type="application/pdf" className="w-full h-full rounded-b-lg">
-                    <iframe src={config.url} className="w-full h-full border-0" title={activeViewerMaterial.title}>
-                      <div className="text-white text-center p-6 space-y-3">
-                        <p>Your browser does not support inline PDF preview.</p>
-                        <button
-                          onClick={() => triggerDownload(config.url, activeViewerMaterial.title, activeViewerMaterial.type)}
-                          className="bg-[#a0f3d4] text-[#00513e] px-4 py-2 rounded-xl font-bold text-[13px]"
-                        >
-                          Download PDF File
-                        </button>
-                      </div>
-                    </iframe>
-                  </object>
                 ) : config.mode === 'iframe' || config.mode === 'google_doc' ? (
                   <iframe
                     src={config.url}
