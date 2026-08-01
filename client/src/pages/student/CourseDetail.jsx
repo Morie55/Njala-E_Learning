@@ -23,18 +23,38 @@ function getFormattedUrl(rawUrl) {
   return `https://${trimmed}`
 }
 
+/** Maps a material's known type to a sensible default file extension */
+const TYPE_EXTENSIONS = { pdf: 'pdf', slides: 'pptx', video: 'mp4' }
+
+/** Extracts a usable extension from a URL path, ignoring query strings */
+function extensionFromUrl(url) {
+  const path = url.split('?')[0].split('#')[0]
+  const match = path.match(/\.([a-zA-Z0-9]{2,5})$/)
+  return match ? match[1].toLowerCase() : ''
+}
+
+/** Builds a safe download filename that always keeps a real file extension */
+function buildDownloadFilename(title, rawUrl, materialType) {
+  const base = (title || 'Material_Download').replace(/[^a-zA-Z0-9._ -]/g, '_').trim() || 'Material_Download'
+  const existingExt = extensionFromUrl(rawUrl) || TYPE_EXTENSIONS[materialType] || ''
+  const alreadyHasExt = existingExt && base.toLowerCase().endsWith(`.${existingExt}`)
+  return alreadyHasExt || !existingExt ? base : `${base}.${existingExt}`
+}
+
 /** Robust File Download helper handling Cloudinary & cross-origin URLs */
-async function triggerDownload(rawUrl, title = 'Material_Download') {
+async function triggerDownload(rawUrl, title = 'Material_Download', materialType = '') {
   const url = getFormattedUrl(rawUrl)
   if (!url) return
+  const filename = buildDownloadFilename(title, url, materialType)
 
   // 1. Cloudinary URLs: inject fl_attachment to force direct browser download
+  // Drop a.target='_blank' — combined with a.download on a cross-origin URL it is
+  // unreliable across browsers. fl_attachment already forces download via Content-Disposition.
   if (url.includes('res.cloudinary.com') && url.includes('/upload/')) {
     const downloadUrl = url.replace('/upload/', '/upload/fl_attachment/')
     const a = document.createElement('a')
     a.href = downloadUrl
-    a.target = '_blank'
-    a.download = title
+    a.download = filename
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -48,7 +68,7 @@ async function triggerDownload(rawUrl, title = 'Material_Download') {
     const blobUrl = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = blobUrl
-    a.download = title.replace(/[^a-zA-Z0-9._-]/g, '_')
+    a.download = filename
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -99,14 +119,24 @@ function resolveViewerConfig(material) {
     return { mode: 'audio', url: rawUrl }
   }
 
-  // Direct PDF
+  // Direct PDF — Cloudinary categorises PDFs as an "image" resource and does
+  // append .pdf to the URL, but trust the material's own type regardless.
   if (type === 'pdf' || lowerUrl.match(/\.pdf(\?.*)?$/)) {
     return { mode: 'pdf', url: rawUrl }
   }
 
-  // Office Documents -> Google Docs Viewer
-  if (lowerUrl.match(/\.(doc|docx|ppt|pptx|xls|xlsx)(\?.*)?$/)) {
-    return { mode: 'google_doc', url: `https://docs.google.com/viewer?url=${encodeURIComponent(rawUrl)}&embedded=true` }
+  // Slides / Office documents -> Google Docs Viewer.
+  // Cloudinary serves non-image/video files as "raw" resources, and raw uploads
+  // often come back with NO file extension in the URL at all — so this must not
+  // depend solely on the URL matching .doc/.docx/.ppt/.pptx/.xls/.xlsx. Trust the
+  // material's own `type` (set at upload time) first.
+  if (type === 'slides' || lowerUrl.match(/\.(doc|docx|ppt|pptx|xls|xlsx)(\?.*)?$/)) {
+    // Google Docs Viewer needs a recognizable extension to know how to render the
+    // file. Append one if the URL doesn't already end in a known office extension —
+    // Cloudinary will still serve the correct bytes with a format suffix appended.
+    const hasOfficeExt = /\.(doc|docx|ppt|pptx|xls|xlsx)$/.test(rawUrl.split('?')[0])
+    const viewableUrl = hasOfficeExt ? rawUrl : `${rawUrl}.pptx`
+    return { mode: 'google_doc', url: `https://docs.google.com/viewer?url=${encodeURIComponent(viewableUrl)}&embedded=true` }
   }
 
   // General Web Link / Webpage
@@ -304,7 +334,7 @@ export default function CourseDetail() {
                       {/* Force Download button */}
                       {formattedUrl && (
                         <button
-                          onClick={() => triggerDownload(formattedUrl, m.title)}
+                          onClick={() => triggerDownload(formattedUrl, m.title, m.type)}
                           className="p-1.5 text-[#44474f] hover:bg-[#f6f3f2] rounded-lg transition-colors cursor-pointer"
                           title="Download Original File"
                         >
@@ -377,7 +407,7 @@ export default function CourseDetail() {
                 <div className="flex items-center gap-2 shrink-0">
                   {formattedUrl && (
                     <button
-                      onClick={() => triggerDownload(formattedUrl, activeViewerMaterial.title)}
+                      onClick={() => triggerDownload(formattedUrl, activeViewerMaterial.title, activeViewerMaterial.type)}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-[#03224d] text-white rounded-lg text-[12px] font-bold hover:bg-[#1f3864] transition-colors cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[16px]">download</span>
@@ -424,7 +454,7 @@ export default function CourseDetail() {
                       <div className="text-white text-center p-6 space-y-3">
                         <p>Your browser does not support inline PDF preview.</p>
                         <button
-                          onClick={() => triggerDownload(config.url, activeViewerMaterial.title)}
+                          onClick={() => triggerDownload(config.url, activeViewerMaterial.title, activeViewerMaterial.type)}
                           className="bg-[#a0f3d4] text-[#00513e] px-4 py-2 rounded-xl font-bold text-[13px]"
                         >
                           Download PDF File
