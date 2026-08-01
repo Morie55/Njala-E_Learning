@@ -129,14 +129,14 @@ export default function Messages() {
 
   if (loading) {
     return (
-      <AppLayout role={role}>
+      <AppLayout>
         <div className="p-8 text-center text-[#747780]">Loading messages…</div>
       </AppLayout>
     )
   }
 
   return (
-    <AppLayout role={role}>
+    <AppLayout>
     <div className="space-y-4">
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl text-white text-[13px] font-bold shadow-lg ${toast.type === 'error' ? 'bg-[#ba1a1a]' : 'bg-[#03224d]'}`}>

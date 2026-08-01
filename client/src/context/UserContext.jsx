@@ -45,6 +45,7 @@ export function UserProvider({ children }) {
     setDbUser,
     role: dbUser?.role ?? null,
     isLoaded,
+    loading: !isLoaded,
     isSignedIn,
     error,
   }

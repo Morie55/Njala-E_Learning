@@ -76,7 +76,7 @@ export default function Timetable() {
   const slotsForDay = (day) => slots.filter(s => s.dayOfWeek === day)
 
   return (
-    <AppLayout role={role}>
+    <AppLayout>
     <div className="space-y-5">
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl text-white text-[13px] font-bold shadow-lg ${toast.type === 'error' ? 'bg-[#ba1a1a]' : 'bg-[#086b53]'}`}>

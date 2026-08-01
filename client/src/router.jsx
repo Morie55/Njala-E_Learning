@@ -88,16 +88,16 @@ const AlumniDashboard = lazy(() => import('./pages/alumni/Dashboard'))
 /** Requires Clerk sign-in. Redirects to /sign-in if not authenticated. */
 function RequireAuth({ children }) {
   const { isSignedIn, isLoaded } = useAuth()
-  if (!isLoaded) return <div className="flex items-center justify-center min-h-screen"><LoadingSkeleton type="card" count={4} /></div>
+  if (!isLoaded) return <LayoutLoader />
   if (!isSignedIn) return <Navigate to="/sign-in" replace />
   return children
 }
 
 /** Requires specific role(s). Redirects to /dashboard if wrong role. */
 function RequireRole({ allowedRoles, children }) {
-  const { role, loading } = useUser()
-  if (loading) return <div className="flex items-center justify-center min-h-screen"><LoadingSkeleton type="card" count={4} /></div>
-  if (!allowedRoles.includes(role)) return <Navigate to="/dashboard" replace />
+  const { role, isLoaded } = useUser()
+  if (!isLoaded) return <LayoutLoader />
+  if (!role || !allowedRoles.includes(role)) return <Navigate to="/dashboard" replace />
   return children
 }
 
@@ -235,8 +235,8 @@ const router = createBrowserRouter([
       { path: 'academic-calendar',  element: <RequireRole allowedRoles={['admin', 'dept_head']}><AcademicCalendar /></RequireRole> },
 
       // ── Shared Phase 5 ──
-      { path: 'timetable',          element: <Timetable /> },
-      { path: 'messages',           element: <Messages /> },
+      { path: 'timetable',          element: <RequireRole allowedRoles={['student','lecturer','dept_head','admin','alumni']}><Timetable /></RequireRole> },
+      { path: 'messages',           element: <RequireRole allowedRoles={['student','lecturer','dept_head','admin','alumni']}><Messages /></RequireRole> },
 
       // ── Quiz & Alumni Phase 5 ──
       { path: 'quizzes/create',     element: <RequireRole allowedRoles={['lecturer','dept_head','admin']}><CreateQuiz /></RequireRole> },
