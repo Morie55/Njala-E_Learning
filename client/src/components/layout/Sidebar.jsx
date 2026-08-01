@@ -104,8 +104,8 @@ export default function Sidebar({ role, mobileOpen, onClose }) {
         {/* Header (Logo + Mobile Close Button) */}
         <div className="px-5 sm:px-6 mb-6 sm:mb-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 overflow-hidden bg-[#03224d] shrink-0 rounded-xl p-0.5 shadow-xs border border-[#c4c6d0]">
-              <img src={njalaLogo} alt="Njala University Logo" className="w-full h-full object-cover rounded-lg" />
+            <div className="w-10 h-10 overflow-hidden bg-[#03224d] shrink-0 p-0.5">
+              <img src={njalaLogo} alt="Njala University Logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <h1 className="text-lg sm:text-[20px] font-bold leading-tight text-[#03224d]">NELMS</h1>

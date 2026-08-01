@@ -77,7 +77,7 @@ export default function Timetable() {
 
   return (
     <AppLayout role={role}>
-    <div className="p-4 sm:p-6 space-y-5">
+    <div className="space-y-5">
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl text-white text-[13px] font-bold shadow-lg ${toast.type === 'error' ? 'bg-[#ba1a1a]' : 'bg-[#086b53]'}`}>
           {toast.msg}

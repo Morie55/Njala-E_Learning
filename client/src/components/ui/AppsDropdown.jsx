@@ -55,6 +55,15 @@ const APPS = [
     href: 'mailto:support@njala.edu.sl',
     external: true,
   },
+  {
+    name: 'Academic Calendar',
+    description: 'Semester periods & enrollment windows',
+    icon: 'event_note',
+    bgColor: 'bg-[#fff3cd]',
+    textColor: 'text-[#7a5a00]',
+    href: '/academic-calendar',
+    external: false,
+  },
 ]
 
 export default function AppsDropdown({ onClose }) {

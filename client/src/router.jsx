@@ -2,6 +2,7 @@ import { useState, lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { useUser } from './hooks/useUser'
+import AppLayout from './components/layout/AppLayout'
 import LoadingSkeleton from './components/ui/LoadingSkeleton'
 import api from './lib/api'
 
@@ -11,6 +12,16 @@ function PageLoader() {
     <div className="p-6 max-w-5xl mx-auto">
       <LoadingSkeleton type="card" count={3} />
     </div>
+  )
+}
+
+// Layout-aware loader — keeps sidebar/topbar visible while JS chunks download
+function LayoutLoader() {
+  const { role } = useUser()
+  return (
+    <AppLayout role={role}>
+      <PageLoader />
+    </AppLayout>
   )
 }
 
@@ -163,7 +174,7 @@ const router = createBrowserRouter([
     path: '/*',
     element: (
       <RequireAuth>
-        <Suspense fallback={<PageLoader />}>
+        <Suspense fallback={<LayoutLoader />}>
           <Outlet />
         </Suspense>
       </RequireAuth>

@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useUser } from '../../hooks/useUser'
+import AppLayout from '../../components/layout/AppLayout'
 import api from '../../lib/api'
 
 export default function Messages() {
-  const { dbUser } = useUser()
+  const { dbUser, role } = useUser()
   const [conversations, setConversations] = useState([])
   const [contacts, setContacts] = useState([])
   const [activeContact, setActiveContact] = useState(null)
@@ -127,11 +128,16 @@ export default function Messages() {
   }
 
   if (loading) {
-    return <div className="p-8 text-center text-[#747780]">Loading messages…</div>
+    return (
+      <AppLayout role={role}>
+        <div className="p-8 text-center text-[#747780]">Loading messages…</div>
+      </AppLayout>
+    )
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-4">
+    <AppLayout role={role}>
+    <div className="space-y-4">
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl text-white text-[13px] font-bold shadow-lg ${toast.type === 'error' ? 'bg-[#ba1a1a]' : 'bg-[#03224d]'}`}>
           {toast.msg}
@@ -314,5 +320,6 @@ export default function Messages() {
         </div>
       )}
     </div>
+    </AppLayout>
   )
 }

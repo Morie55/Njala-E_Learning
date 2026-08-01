@@ -69,7 +69,7 @@ export default function AcademicCalendar() {
 
   return (
     <AppLayout role={role}>
-    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6">
+    <div className="space-y-6">
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg text-white text-[13px] font-bold ${toast.type === 'error' ? 'bg-[#ba1a1a]' : 'bg-[#086b53]'}`}>
           {toast.msg}
