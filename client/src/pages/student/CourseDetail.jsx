@@ -203,7 +203,7 @@ export default function CourseDetail() {
   const progressPct = totalMaterials > 0 ? Math.round((completedCount / totalMaterials) * 100) : 0
 
   return (
-    <AppLayout role="student">
+    <AppLayout>
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl text-white text-[13px] font-bold shadow-lg ${toast.type === 'error' ? 'bg-[#ba1a1a]' : 'bg-[#086b53]'}`}>
           {toast.msg}

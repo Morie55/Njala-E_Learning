@@ -32,6 +32,7 @@ const NAV = {
     { icon: 'dashboard', label: 'Dashboard', path: '/dashboard' },
     { icon: 'manage_search', label: 'Course Oversight', path: '/oversight' },
     { icon: 'summarize', label: 'Dept Report', path: '/dept-report' },
+    { icon: 'date_range', label: 'Academic Calendar', path: '/academic-calendar' },
     { icon: 'chat', label: 'Messages', path: '/messages' },
     { icon: 'calendar_month', label: 'Timetable', path: '/timetable' },
     { icon: 'settings', label: 'Settings', path: '/settings' },

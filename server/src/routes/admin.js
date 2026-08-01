@@ -305,16 +305,15 @@ router.get('/audit-logs', ...auth, adminOnly, async (req, res, next) => {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('actorId', 'fullName email role')
         .lean(),
       AuditLog.countDocuments(filter),
     ])
 
     const enriched = logs.map(l => ({
       ...l,
-      actorName: l.actorId?.fullName ?? l.actorClerkId ?? 'System',
-      actorEmail: l.actorId?.email ?? '',
-      actorRole: l.actorId?.role ?? '',
+      actorName: l.performedByEmail || l.performedBy || 'System',
+      actorEmail: l.performedByEmail || '',
+      actorRole: l.performedByRole || '',
     }))
 
     res.json({

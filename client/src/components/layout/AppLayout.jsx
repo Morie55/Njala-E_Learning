@@ -2,9 +2,12 @@ import { useState } from 'react'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
 import PWAInstallBanner from '../ui/PWAInstallBanner'
+import { useUser } from '../../hooks/useUser'
 
-export default function AppLayout({ role, children, onSearch }) {
+export default function AppLayout({ role: propRole, children, onSearch }) {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { role: contextRole } = useUser()
+  const role = propRole || contextRole
 
   return (
     <div className="min-h-screen bg-[#fbf9f8]">

@@ -96,7 +96,7 @@ export default function Grades() {
   }
 
   return (
-    <AppLayout role="student">
+    <AppLayout>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6 sm:mb-8">
         <div>

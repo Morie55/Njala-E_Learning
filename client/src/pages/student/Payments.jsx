@@ -69,7 +69,7 @@ export default function StudentPayments() {
   const selected = feeSchedule.find(f => f.type === selectedFee)
 
   return (
-    <AppLayout role="student">
+    <AppLayout>
       <div className="mb-6">
         <h2 className="text-[32px] font-semibold text-[#03224d]">Fee Payments</h2>
         <p className="text-[14px] text-[#44474f]">Pay your university fees securely via Monime mobile money (Orange Money, Afrimoney).</p>

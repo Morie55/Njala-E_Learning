@@ -115,8 +115,8 @@ function RoleDashboard() {
 /** Polymorphic /courses route — student sees MyCourses, lecturer sees CourseManagement. */
 function CoursesPage() {
   const { role } = useUser()
-  if (role === 'student') return <MyCourses />
-  if (role === 'lecturer') return <CourseManagement />
+  if (role === 'student' || role === 'alumni') return <MyCourses />
+  if (role === 'lecturer' || role === 'admin') return <CourseManagement />
   if (role === 'dept_head') return <CourseOversight />
   return <MyCourses />
 }
@@ -128,6 +128,13 @@ function SettingsPage() {
   if (role === 'dept_head') return <DeptHeadSettings />
   if (role === 'lecturer') return <LecturerSettings />
   return <Navigate to="/dashboard" replace />
+}
+
+/** Polymorphic /payments route — student sees StudentPayments, admin/dept_head sees PaymentManagement. */
+function PaymentsPage() {
+  const { role } = useUser()
+  if (role === 'admin' || role === 'dept_head') return <PaymentManagement />
+  return <StudentPayments />
 }
 
 /** Error boundary component for routes */
@@ -186,20 +193,20 @@ const router = createBrowserRouter([
       // ── Shared / Polymorphic ──
       { path: 'courses',  element: <CoursesPage /> },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'payments', element: <PaymentsPage /> },
 
       // ── Student ──
-      { path: 'courses/:id',   element: <RequireRole allowedRoles={['student']}><CourseDetail /></RequireRole> },
+      { path: 'courses/:id',   element: <RequireRole allowedRoles={['student', 'lecturer', 'dept_head', 'admin']}><CourseDetail /></RequireRole> },
       { path: 'browse-courses', element: <RequireRole allowedRoles={['student']}><BrowseCourses /></RequireRole> },
       { path: 'assignments',   element: <RequireRole allowedRoles={['student']}><StudentAssignments /></RequireRole> },
       {
         path: 'courses/:courseId/assignments/:id/submit',
         element: <RequireRole allowedRoles={['student']}><AssignmentSubmission /></RequireRole>,
       },
-      { path: 'grades',        element: <RequireRole allowedRoles={['student']}><Grades /></RequireRole> },
+      { path: 'grades',        element: <RequireRole allowedRoles={['student', 'alumni', 'admin']}><Grades /></RequireRole> },
       { path: 'profile',       element: <Profile /> },
       { path: 'attendance',    element: <RequireRole allowedRoles={['student']}><StudentAttendance /></RequireRole> },
       { path: 'progress',      element: <RequireRole allowedRoles={['student']}><StudentProgress /></RequireRole> },
-      { path: 'payments',      element: <RequireRole allowedRoles={['student']}><StudentPayments /></RequireRole> },
       { path: 'courses/:id/certificate', element: <RequireRole allowedRoles={['student']}><CertificatePage /></RequireRole> },
       { path: 'courses/:courseId/discussions',             element: <DiscussionBoard /> },
       { path: 'courses/:courseId/discussions/:postId',     element: <DiscussionPost /> },
@@ -225,15 +232,14 @@ const router = createBrowserRouter([
       { path: 'analytics',          element: <RequireRole allowedRoles={['admin']}><Analytics /></RequireRole> },
       { path: 'audit-logs',         element: <RequireRole allowedRoles={['admin']}><AuditLogs /></RequireRole> },
       { path: 'dept-report',        element: <RequireRole allowedRoles={['admin','dept_head']}><DepartmentReport /></RequireRole> },
-      { path: 'payments',           element: <RequireRole allowedRoles={['admin']}><PaymentManagement /></RequireRole> },
-      { path: 'academic-calendar',  element: <RequireRole allowedRoles={['admin']}><AcademicCalendar /></RequireRole> },
+      { path: 'academic-calendar',  element: <RequireRole allowedRoles={['admin', 'dept_head']}><AcademicCalendar /></RequireRole> },
 
       // ── Shared Phase 5 ──
       { path: 'timetable',          element: <Timetable /> },
       { path: 'messages',           element: <Messages /> },
 
       // ── Quiz & Alumni Phase 5 ──
-      { path: 'quizzes/create',     element: <RequireRole allowedRoles={['lecturer','admin']}><CreateQuiz /></RequireRole> },
+      { path: 'quizzes/create',     element: <RequireRole allowedRoles={['lecturer','dept_head','admin']}><CreateQuiz /></RequireRole> },
       { path: 'quizzes/:id/take',   element: <RequireRole allowedRoles={['student']}><TakeQuiz /></RequireRole> },
       { path: 'alumni/dashboard',   element: <RequireRole allowedRoles={['alumni','student','admin']}><AlumniDashboard /></RequireRole> },
     ],
