@@ -6,6 +6,112 @@ import StatusBadge from '../../components/ui/StatusBadge'
 import api from '../../lib/api'
 
 const TABS = ['Materials', 'Assignments', 'Announcements']
+const FILE_ICONS = {
+  pdf: 'picture_as_pdf',
+  slides: 'slideshow',
+  video: 'videocam',
+  audio: 'audio_file',
+  image: 'image',
+  link: 'link',
+}
+
+/** Formats URLs to ensure protocol is present */
+function getFormattedUrl(rawUrl) {
+  if (!rawUrl) return ''
+  const trimmed = rawUrl.trim()
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed
+  return `https://${trimmed}`
+}
+
+/** Robust File Download helper handling Cloudinary & cross-origin URLs */
+async function triggerDownload(rawUrl, title = 'Material_Download') {
+  const url = getFormattedUrl(rawUrl)
+  if (!url) return
+
+  // 1. Cloudinary URLs: inject fl_attachment to force direct browser download
+  if (url.includes('res.cloudinary.com') && url.includes('/upload/')) {
+    const downloadUrl = url.replace('/upload/', '/upload/fl_attachment/')
+    const a = document.createElement('a')
+    a.href = downloadUrl
+    a.target = '_blank'
+    a.download = title
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    return
+  }
+
+  // 2. Cross-origin / direct URL: fetch blob fallback
+  try {
+    const res = await fetch(url)
+    const blob = await res.blob()
+    const blobUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = blobUrl
+    a.download = title.replace(/[^a-zA-Z0-9._-]/g, '_')
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000)
+  } catch {
+    // 3. Direct window open fallback
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+}
+
+/** Resolves native viewer mode and embed URLs for various file types */
+function resolveViewerConfig(material) {
+  if (!material || !material.fileUrl) return null
+  const rawUrl = getFormattedUrl(material.fileUrl)
+  const lowerUrl = rawUrl.toLowerCase()
+  const type = (material.type || '').toLowerCase()
+
+  // YouTube Embed
+  const ytMatch = rawUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/)
+  if (ytMatch && ytMatch[1]) {
+    return { mode: 'iframe', url: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1` }
+  }
+
+  // Vimeo Embed
+  const vimeoMatch = rawUrl.match(/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/[^\/]*\/videos\/|album\/\d+\/video\/|video\/|)(\d+)/)
+  if (vimeoMatch && vimeoMatch[1]) {
+    return { mode: 'iframe', url: `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1` }
+  }
+
+  // Google Drive View -> Preview Embed
+  if (lowerUrl.includes('drive.google.com') && lowerUrl.includes('/file/d/')) {
+    const drivePreviewUrl = rawUrl.replace(/\/view(\?.*)?$/, '/preview')
+    return { mode: 'iframe', url: drivePreviewUrl }
+  }
+
+  // Direct Images
+  if (type === 'image' || lowerUrl.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/)) {
+    return { mode: 'image', url: rawUrl }
+  }
+
+  // Direct Videos
+  if (type === 'video' || lowerUrl.match(/\.(mp4|webm|mov|m4v)(\?.*)?$/)) {
+    return { mode: 'video', url: rawUrl }
+  }
+
+  // Direct Audio
+  if (type === 'audio' || lowerUrl.match(/\.(mp3|wav|ogg|m4a)(\?.*)?$/)) {
+    return { mode: 'audio', url: rawUrl }
+  }
+
+  // Direct PDF
+  if (type === 'pdf' || lowerUrl.match(/\.pdf(\?.*)?$/)) {
+    return { mode: 'pdf', url: rawUrl }
+  }
+
+  // Office Documents -> Google Docs Viewer
+  if (lowerUrl.match(/\.(doc|docx|ppt|pptx|xls|xlsx)(\?.*)?$/)) {
+    return { mode: 'google_doc', url: `https://docs.google.com/viewer?url=${encodeURIComponent(rawUrl)}&embedded=true` }
+  }
+
+  // General Web Link / Webpage
+  return { mode: 'link', url: rawUrl }
+}
 
 export default function CourseDetail() {
   const { id } = useParams()
@@ -63,8 +169,6 @@ export default function CourseDetail() {
       showToast(err.response?.data?.error ?? 'Failed to update progress', 'error')
     }
   }
-
-  const FILE_ICONS = { pdf: 'picture_as_pdf', slides: 'slideshow', video: 'videocam', link: 'link' }
 
   const totalMaterials = materials.length
   const completedCount = completedMaterialIds.size
@@ -151,6 +255,8 @@ export default function CourseDetail() {
               {materials.length === 0 && <p className="text-[14px] text-[#44474f] text-center py-12">No materials uploaded yet.</p>}
               {materials.map(m => {
                 const isCompleted = completedMaterialIds.has(m._id)
+                const formattedUrl = getFormattedUrl(m.fileUrl)
+
                 return (
                   <div
                     key={m._id}
@@ -174,7 +280,7 @@ export default function CourseDetail() {
                       {/* Mark as complete toggle */}
                       <button
                         onClick={() => toggleComplete(m._id)}
-                        className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-colors ${
+                        className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-colors cursor-pointer ${
                           isCompleted
                             ? 'bg-[#a0f3d4] text-[#00513e] hover:bg-[#85e4c2]'
                             : 'border border-[#c4c6d0] text-[#44474f] hover:bg-[#f6f3f2]'
@@ -185,27 +291,25 @@ export default function CourseDetail() {
                       </button>
 
                       {/* In-app viewer modal trigger */}
-                      {m.fileUrl && (
+                      {formattedUrl && (
                         <button
                           onClick={() => setActiveViewerMaterial(m)}
-                          className="flex items-center gap-1 px-3 py-1.5 bg-[#03224d] text-white rounded-lg text-[12px] font-bold hover:bg-[#1f3864] transition-colors"
+                          className="flex items-center gap-1 px-3 py-1.5 bg-[#03224d] text-white rounded-lg text-[12px] font-bold hover:bg-[#1f3864] transition-colors cursor-pointer"
                         >
                           <span className="material-symbols-outlined text-[16px]">visibility</span>
                           <span>View In-App</span>
                         </button>
                       )}
 
-                      {/* Download link */}
-                      {m.fileUrl && (
-                        <a
-                          href={m.fileUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="p-1.5 text-[#44474f] hover:bg-[#f6f3f2] rounded-lg transition-colors"
+                      {/* Force Download button */}
+                      {formattedUrl && (
+                        <button
+                          onClick={() => triggerDownload(formattedUrl, m.title)}
+                          className="p-1.5 text-[#44474f] hover:bg-[#f6f3f2] rounded-lg transition-colors cursor-pointer"
                           title="Download Original File"
                         >
                           <span className="material-symbols-outlined text-[18px]">download</span>
-                        </a>
+                        </button>
                       )}
                     </div>
                   </div>
@@ -252,43 +356,112 @@ export default function CourseDetail() {
       )}
 
       {/* In-App Material Viewer Modal */}
-      {activeViewerMaterial && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4" onClick={() => setActiveViewerMaterial(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-[#c4c6d0] flex items-center justify-between bg-[#f6f3f2]">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#03224d]">{FILE_ICONS[activeViewerMaterial.type] ?? 'description'}</span>
-                <h3 className="font-bold text-[15px] text-[#1b1c1c] truncate">{activeViewerMaterial.title}</h3>
-              </div>
-              <div className="flex items-center gap-2">
-                <a
-                  href={activeViewerMaterial.fileUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-3 py-1.5 bg-[#03224d] text-white rounded-lg text-[12px] font-bold hover:bg-[#1f3864]"
-                >
-                  Download File
-                </a>
-                <button onClick={() => setActiveViewerMaterial(null)} className="p-1 hover:bg-[#e8e3df] rounded-lg">
-                  <span className="material-symbols-outlined">close</span>
-                </button>
-              </div>
-            </div>
+      {activeViewerMaterial && (() => {
+        const config = resolveViewerConfig(activeViewerMaterial)
+        const formattedUrl = getFormattedUrl(activeViewerMaterial.fileUrl)
 
-            <div className="flex-1 bg-[#282828] relative flex items-center justify-center overflow-hidden">
-              {activeViewerMaterial.type === 'video' || activeViewerMaterial.fileUrl?.match(/\.(mp4|webm|mov)$/i) ? (
-                <video src={activeViewerMaterial.fileUrl} controls className="max-w-full max-h-full rounded-lg" autoPlay />
-              ) : (
-                <iframe
-                  src={`https://docs.google.com/viewer?url=${encodeURIComponent(activeViewerMaterial.fileUrl)}&embedded=true`}
-                  className="w-full h-full border-0"
-                  title={activeViewerMaterial.title}
-                />
-              )}
+        return (
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4" onClick={() => setActiveViewerMaterial(null)}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden border border-[#c4c6d0]" onClick={e => e.stopPropagation()}>
+              {/* Modal Top Header */}
+              <div className="p-4 border-b border-[#c4c6d0] flex items-center justify-between bg-[#f6f3f2] shrink-0">
+                <div className="flex items-center gap-3 min-w-0 pr-2">
+                  <span className="material-symbols-outlined text-[#03224d] text-2xl shrink-0">
+                    {FILE_ICONS[activeViewerMaterial.type] ?? 'description'}
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-[15px] text-[#1b1c1c] truncate">{activeViewerMaterial.title}</h3>
+                    <p className="text-[11px] text-[#747780] uppercase tracking-wider">{activeViewerMaterial.type}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {formattedUrl && (
+                    <button
+                      onClick={() => triggerDownload(formattedUrl, activeViewerMaterial.title)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#03224d] text-white rounded-lg text-[12px] font-bold hover:bg-[#1f3864] transition-colors cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">download</span>
+                      <span className="hidden sm:inline">Download File</span>
+                    </button>
+                  )}
+                  {formattedUrl && (
+                    <a
+                      href={formattedUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-1.5 text-[#44474f] hover:bg-[#e8e3df] rounded-lg transition-colors"
+                      title="Open in new tab"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">open_in_new</span>
+                    </a>
+                  )}
+                  <button onClick={() => setActiveViewerMaterial(null)} className="p-1.5 text-[#44474f] hover:bg-[#e8e3df] rounded-lg transition-colors cursor-pointer">
+                    <span className="material-symbols-outlined text-[20px]">close</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Body / Media Canvas */}
+              <div className="flex-1 bg-[#1e1e1e] relative flex items-center justify-center overflow-hidden p-2">
+                {!config ? (
+                  <div className="text-white text-center p-6">
+                    <span className="material-symbols-outlined text-4xl block mb-2 text-[#ffdad6]">error</span>
+                    <p className="font-bold">No file URL attached</p>
+                  </div>
+                ) : config.mode === 'image' ? (
+                  <img src={config.url} alt={activeViewerMaterial.title} className="max-w-full max-h-full object-contain rounded-lg shadow-lg" />
+                ) : config.mode === 'video' ? (
+                  <video src={config.url} controls className="max-w-full max-h-full rounded-lg shadow-lg" autoPlay />
+                ) : config.mode === 'audio' ? (
+                  <div className="bg-[#2d2d2d] p-8 rounded-2xl border border-white/10 text-center space-y-4 max-w-md w-full">
+                    <span className="material-symbols-outlined text-5xl text-[#a0f3d4] block">graphic_eq</span>
+                    <p className="text-white font-bold text-[16px]">{activeViewerMaterial.title}</p>
+                    <audio src={config.url} controls className="w-full" autoPlay />
+                  </div>
+                ) : config.mode === 'pdf' ? (
+                  <object data={config.url} type="application/pdf" className="w-full h-full rounded-b-lg">
+                    <iframe src={config.url} className="w-full h-full border-0" title={activeViewerMaterial.title}>
+                      <div className="text-white text-center p-6 space-y-3">
+                        <p>Your browser does not support inline PDF preview.</p>
+                        <button
+                          onClick={() => triggerDownload(config.url, activeViewerMaterial.title)}
+                          className="bg-[#a0f3d4] text-[#00513e] px-4 py-2 rounded-xl font-bold text-[13px]"
+                        >
+                          Download PDF File
+                        </button>
+                      </div>
+                    </iframe>
+                  </object>
+                ) : config.mode === 'iframe' || config.mode === 'google_doc' ? (
+                  <iframe
+                    src={config.url}
+                    className="w-full h-full border-0 bg-white rounded-lg"
+                    title={activeViewerMaterial.title}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                ) : (
+                  <div className="bg-[#2d2d2d] p-8 rounded-2xl border border-white/10 text-center space-y-4 max-w-md w-full">
+                    <span className="material-symbols-outlined text-5xl text-[#d8e2ff] block">link</span>
+                    <p className="text-white font-bold text-[16px]">{activeViewerMaterial.title}</p>
+                    <p className="text-[13px] text-white/70 truncate">{config.url}</p>
+                    <div className="flex justify-center gap-3 pt-2">
+                      <a
+                        href={config.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="bg-[#03224d] text-white px-5 py-2.5 rounded-xl font-bold text-[13px] hover:bg-[#1f3864]"
+                      >
+                        Open External Link
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
     </AppLayout>
   )
 }

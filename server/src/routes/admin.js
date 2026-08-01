@@ -194,13 +194,23 @@ router.post('/users/bulk-import', ...auth, adminOnly, async (req, res, next) => 
         await user.save()
         results.push({ email, fullName, role, status: 'updated', pin: 'N/A (Existing user)', userId: user._id })
       } else {
-        const clerkUser = await clerk.users.createUser({
-          emailAddress: [email],
-          password: pin,
-          skipPasswordChecks: true,
-          firstName: fullName.split(' ')[0],
-          lastName: fullName.split(' ').slice(1).join(' ') || undefined,
-        })
+        const username = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') + '_' + Math.floor(1000 + Math.random() * 9000)
+        let clerkUser
+        try {
+          clerkUser = await clerk.users.createUser({
+            emailAddress: [email],
+            username,
+            password: pin,
+            skipPasswordChecks: true,
+            firstName: fullName.split(' ')[0] || 'User',
+            lastName: fullName.split(' ').slice(1).join(' ') || undefined,
+            publicMetadata: { role },
+          })
+        } catch (clerkErr) {
+          const errMsg = clerkErr.errors?.[0]?.longMessage || clerkErr.errors?.[0]?.message || clerkErr.message || 'Clerk user creation failed'
+          results.push({ email, fullName, role, status: 'failed', error: errMsg })
+          continue
+        }
 
         const payload = {
           clerkId: clerkUser.id,
