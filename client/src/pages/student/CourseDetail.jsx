@@ -41,11 +41,8 @@ function buildDownloadFilename(title, rawUrl, materialType) {
   return alreadyHasExt || !existingExt ? base : `${base}.${existingExt}`
 }
 
-/** Robust File Download helper — always downloads via a same-origin Blob URL so
- * the browser's `download` attribute is honored reliably. Relying on an <a download>
- * pointed directly at a cross-origin URL (e.g. Cloudinary) is not dependable: several
- * browsers ignore the `download` attribute for cross-origin hrefs and just navigate
- * to the file instead, regardless of Cloudinary's fl_attachment flag. */
+/** Robust File Download helper — fetches the file as a Blob so the browser's
+ * `download` attribute is honored reliably, even for cross-origin Vercel Blob URLs. */
 async function triggerDownload(rawUrl, title = 'Material_Download', materialType = '') {
   const url = getFormattedUrl(rawUrl)
   if (!url) return
@@ -64,17 +61,14 @@ async function triggerDownload(rawUrl, title = 'Material_Download', materialType
     document.body.removeChild(a)
     setTimeout(() => URL.revokeObjectURL(blobUrl), 10000)
   } catch (err) {
-    console.error('Download failed, opening the file directly instead:', err)
-    // Last resort: open the plain, untransformed URL. Do NOT append Cloudinary's
-    // fl_attachment flag here — accounts created since mid-2024 have "Strict
-    // Transformations" enabled by default, which rejects any unsigned, on-the-fly
-    // transformation (fl_attachment included) with an HTTP 401. The plain delivery
-    // URL has no transformation applied, so it's always allowed.
+    console.error('Download failed, opening in new tab instead:', err)
     window.open(url, '_blank', 'noopener,noreferrer')
   }
 }
 
-/** Resolves native viewer mode and embed URLs for various file types */
+/** Resolves native viewer mode and embed URLs for various file types.
+ * Vercel Blob URLs are served from a plain public CDN with no X-Frame-Options
+ * restrictions, so PDFs and videos can be embedded natively without any proxy. */
 function resolveViewerConfig(material) {
   if (!material || !material.fileUrl) return null
   const rawUrl = getFormattedUrl(material.fileUrl)
@@ -104,7 +98,7 @@ function resolveViewerConfig(material) {
     return { mode: 'image', url: rawUrl }
   }
 
-  // Direct Videos
+  // Direct Videos — native <video> player
   if (type === 'video' || lowerUrl.match(/\.(mp4|webm|mov|m4v)(\?.*)?$/)) {
     return { mode: 'video', url: rawUrl }
   }
@@ -114,31 +108,158 @@ function resolveViewerConfig(material) {
     return { mode: 'audio', url: rawUrl }
   }
 
-  // PDF — route through Google Docs Viewer so the browser never has to embed the
-  // Cloudinary URL directly. Cloudinary sends X-Frame-Options headers that block
-  // cross-origin <object>/<iframe> embeds; Google fetches and re-serves the file
-  // in a way that can always be safely iframed.
+  // PDF — Vercel Blob CDN has no iframe restrictions, so embed directly.
   if (type === 'pdf' || lowerUrl.match(/\.pdf(\?.*)?$/)) {
-    return { mode: 'google_doc', url: `https://docs.google.com/viewer?url=${encodeURIComponent(rawUrl)}&embedded=true` }
+    return { mode: 'pdf', url: rawUrl }
   }
 
-  // Slides / Office documents -> Google Docs Viewer.
-  // Cloudinary serves non-image/video files as "raw" resources, and raw uploads
-  // often come back with NO file extension in the URL at all — so this must not
-  // depend solely on the URL matching .doc/.docx/.ppt/.pptx/.xls/.xlsx. Trust the
-  // material's own `type` (set at upload time) first.
+  // Slides / Office documents — Microsoft Office Online Viewer.
+  // Vercel Blob preserves the original file extension in the URL, so the viewer
+  // can always detect the correct format without any extension hacks.
   if (type === 'slides' || lowerUrl.match(/\.(doc|docx|ppt|pptx|xls|xlsx)(\?.*)?$/)) {
-    // Microsoft Office Online Viewer is used instead of Google Docs Viewer because
-    // Google's crawler-based approach is blocked by Cloudinary's CDN, causing
-    // "No preview available". Microsoft's viewer fetches the file directly from the
-    // browser, so it reliably reaches Cloudinary raw-upload URLs.
-    const hasOfficeExt = /\.(doc|docx|ppt|pptx|xls|xlsx)$/.test(rawUrl.split('?')[0])
-    const viewableUrl = hasOfficeExt ? rawUrl : `${rawUrl}.pptx`
-    return { mode: 'google_doc', url: `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(viewableUrl)}` }
+    return { mode: 'office', url: `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(rawUrl)}` }
   }
 
   // General Web Link / Webpage
   return { mode: 'link', url: rawUrl }
+}
+
+/** Full-screen viewer modal — renders PDF, video, audio, Office docs, iframes */
+function ViewerModal({ material, onClose }) {
+  const config = resolveViewerConfig(material)
+  const formattedUrl = getFormattedUrl(material.fileUrl)
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden border border-[#c4c6d0]"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* ── Header ── */}
+        <div className="p-4 border-b border-[#c4c6d0] flex items-center justify-between bg-[#f6f3f2] shrink-0">
+          <div className="flex items-center gap-3 min-w-0 pr-2">
+            <span className="material-symbols-outlined text-[#03224d] text-2xl shrink-0">
+              {FILE_ICONS[material.type] ?? 'description'}
+            </span>
+            <div className="min-w-0">
+              <h3 className="font-bold text-[15px] text-[#1b1c1c] truncate">{material.title}</h3>
+              <p className="text-[11px] text-[#747780] uppercase tracking-wider">{material.type}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Download */}
+            {formattedUrl && (
+              <button
+                onClick={() => triggerDownload(formattedUrl, material.title, material.type)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#03224d] text-white rounded-lg text-[12px] font-bold hover:bg-[#1f3864] transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">download</span>
+                <span className="hidden sm:inline">Download</span>
+              </button>
+            )}
+            {/* Open in new tab */}
+            {formattedUrl && (
+              <a
+                href={formattedUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="p-1.5 text-[#44474f] hover:bg-[#e8e3df] rounded-lg transition-colors"
+                title="Open in new tab"
+              >
+                <span className="material-symbols-outlined text-[20px]">open_in_new</span>
+              </a>
+            )}
+            {/* Close */}
+            <button
+              onClick={onClose}
+              className="p-1.5 text-[#44474f] hover:bg-[#e8e3df] rounded-lg transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[20px]">close</span>
+            </button>
+          </div>
+        </div>
+
+        {/* ── Body / Media Canvas ── */}
+        <div className="flex-1 bg-[#1e1e1e] relative flex items-center justify-center overflow-hidden">
+          {!config ? (
+            <div className="text-white text-center p-6">
+              <span className="material-symbols-outlined text-4xl block mb-2 text-[#ffdad6]">error</span>
+              <p className="font-bold">No file URL attached</p>
+            </div>
+
+          ) : config.mode === 'image' ? (
+            <img
+              src={config.url}
+              alt={material.title}
+              className="max-w-full max-h-full object-contain rounded-lg shadow-lg p-2"
+            />
+
+          ) : config.mode === 'video' ? (
+            <video
+              src={config.url}
+              controls
+              autoPlay
+              className="max-w-full max-h-full rounded-lg shadow-lg"
+            />
+
+          ) : config.mode === 'audio' ? (
+            <div className="bg-[#2d2d2d] p-8 rounded-2xl border border-white/10 text-center space-y-4 max-w-md w-full mx-4">
+              <span className="material-symbols-outlined text-5xl text-[#a0f3d4] block">graphic_eq</span>
+              <p className="text-white font-bold text-[16px]">{material.title}</p>
+              <audio src={config.url} controls autoPlay className="w-full" />
+            </div>
+
+          ) : config.mode === 'pdf' ? (
+            /* Vercel Blob PDFs embed natively — no Google Docs proxy needed */
+            <iframe
+              src={config.url}
+              className="w-full h-full border-0"
+              title={material.title}
+            />
+
+          ) : config.mode === 'office' ? (
+            /* Microsoft Office Online Viewer for PPTX / DOCX / XLSX */
+            <iframe
+              src={config.url}
+              className="w-full h-full border-0 bg-white"
+              title={material.title}
+              allowFullScreen
+            />
+
+          ) : config.mode === 'iframe' ? (
+            /* YouTube / Vimeo / Google Drive embeds */
+            <iframe
+              src={config.url}
+              className="w-full h-full border-0"
+              title={material.title}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+
+          ) : (
+            /* Generic external link fallback */
+            <div className="bg-[#2d2d2d] p-8 rounded-2xl border border-white/10 text-center space-y-4 max-w-md w-full mx-4">
+              <span className="material-symbols-outlined text-5xl text-[#d8e2ff] block">link</span>
+              <p className="text-white font-bold text-[16px]">{material.title}</p>
+              <p className="text-[13px] text-white/60 break-all">{config.url}</p>
+              <a
+                href={config.url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-block bg-[#03224d] text-white px-5 py-2.5 rounded-xl font-bold text-[13px] hover:bg-[#1f3864] transition-colors"
+              >
+                Open External Link
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function CourseDetail() {
@@ -384,98 +505,12 @@ export default function CourseDetail() {
       )}
 
       {/* In-App Material Viewer Modal */}
-      {activeViewerMaterial && (() => {
-        const config = resolveViewerConfig(activeViewerMaterial)
-        const formattedUrl = getFormattedUrl(activeViewerMaterial.fileUrl)
-
-        return (
-          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4" onClick={() => setActiveViewerMaterial(null)}>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden border border-[#c4c6d0]" onClick={e => e.stopPropagation()}>
-              {/* Modal Top Header */}
-              <div className="p-4 border-b border-[#c4c6d0] flex items-center justify-between bg-[#f6f3f2] shrink-0">
-                <div className="flex items-center gap-3 min-w-0 pr-2">
-                  <span className="material-symbols-outlined text-[#03224d] text-2xl shrink-0">
-                    {FILE_ICONS[activeViewerMaterial.type] ?? 'description'}
-                  </span>
-                  <div className="min-w-0">
-                    <h3 className="font-bold text-[15px] text-[#1b1c1c] truncate">{activeViewerMaterial.title}</h3>
-                    <p className="text-[11px] text-[#747780] uppercase tracking-wider">{activeViewerMaterial.type}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {formattedUrl && (
-                    <button
-                      onClick={() => triggerDownload(formattedUrl, activeViewerMaterial.title, activeViewerMaterial.type)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#03224d] text-white rounded-lg text-[12px] font-bold hover:bg-[#1f3864] transition-colors cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">download</span>
-                      <span className="hidden sm:inline">Download File</span>
-                    </button>
-                  )}
-                  {formattedUrl && (
-                    <a
-                      href={formattedUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="p-1.5 text-[#44474f] hover:bg-[#e8e3df] rounded-lg transition-colors"
-                      title="Open in new tab"
-                    >
-                      <span className="material-symbols-outlined text-[20px]">open_in_new</span>
-                    </a>
-                  )}
-                  <button onClick={() => setActiveViewerMaterial(null)} className="p-1.5 text-[#44474f] hover:bg-[#e8e3df] rounded-lg transition-colors cursor-pointer">
-                    <span className="material-symbols-outlined text-[20px]">close</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Modal Body / Media Canvas */}
-              <div className="flex-1 bg-[#1e1e1e] relative flex items-center justify-center overflow-hidden p-2">
-                {!config ? (
-                  <div className="text-white text-center p-6">
-                    <span className="material-symbols-outlined text-4xl block mb-2 text-[#ffdad6]">error</span>
-                    <p className="font-bold">No file URL attached</p>
-                  </div>
-                ) : config.mode === 'image' ? (
-                  <img src={config.url} alt={activeViewerMaterial.title} className="max-w-full max-h-full object-contain rounded-lg shadow-lg" />
-                ) : config.mode === 'video' ? (
-                  <video src={config.url} controls className="max-w-full max-h-full rounded-lg shadow-lg" autoPlay />
-                ) : config.mode === 'audio' ? (
-                  <div className="bg-[#2d2d2d] p-8 rounded-2xl border border-white/10 text-center space-y-4 max-w-md w-full">
-                    <span className="material-symbols-outlined text-5xl text-[#a0f3d4] block">graphic_eq</span>
-                    <p className="text-white font-bold text-[16px]">{activeViewerMaterial.title}</p>
-                    <audio src={config.url} controls className="w-full" autoPlay />
-                  </div>
-                ) : config.mode === 'iframe' || config.mode === 'google_doc' ? (
-                  <iframe
-                    src={config.url}
-                    className="w-full h-full border-0 bg-white rounded-lg"
-                    title={activeViewerMaterial.title}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                ) : (
-                  <div className="bg-[#2d2d2d] p-8 rounded-2xl border border-white/10 text-center space-y-4 max-w-md w-full">
-                    <span className="material-symbols-outlined text-5xl text-[#d8e2ff] block">link</span>
-                    <p className="text-white font-bold text-[16px]">{activeViewerMaterial.title}</p>
-                    <p className="text-[13px] text-white/70 truncate">{config.url}</p>
-                    <div className="flex justify-center gap-3 pt-2">
-                      <a
-                        href={config.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="bg-[#03224d] text-white px-5 py-2.5 rounded-xl font-bold text-[13px] hover:bg-[#1f3864]"
-                      >
-                        Open External Link
-                      </a>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )
-      })()}
+      {activeViewerMaterial && (
+        <ViewerModal
+          material={activeViewerMaterial}
+          onClose={() => setActiveViewerMaterial(null)}
+        />
+      )}
     </AppLayout>
   )
 }

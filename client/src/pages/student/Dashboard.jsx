@@ -174,21 +174,6 @@ export default function StudentDashboard() {
               {courses.slice(0, 4).map((c) => (
                 <div key={c._id} className="relative">
                   <CourseCard course={c} linkTo={`/courses/${c._id}`} />
-                  {/* Course Progress Ring / Bar */}
-                  {c.progress !== undefined && (
-                    <div className="px-4 pb-3 -mt-2 bg-white rounded-b-xl border-x border-b border-[#c4c6d0]">
-                      <div className="flex justify-between items-center text-[10px] font-bold text-[#747780] mb-1">
-                        <span>Course Progress</span>
-                        <span>{c.progress ?? 0}%</span>
-                      </div>
-                      <div className="h-1.5 bg-[#f6f3f2] rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-[#086b53] rounded-full transition-all"
-                          style={{ width: `${Math.min(100, c.progress ?? 0)}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>

@@ -3,7 +3,7 @@ import { requireAuth } from '../middleware/auth.js'
 import { populateUser } from '../middleware/populateUser.js'
 import { enforceStatus } from '../middleware/enforceStatus.js'
 import { upload } from '../lib/multer.js'
-import { uploadToCloudinary } from '../lib/cloudinary.js'
+import { uploadToBlob } from '../lib/vercelBlob.js'
 import Submission from '../models/Submission.js'
 import Assignment from '../models/Assignment.js'
 import Enrollment from '../models/Enrollment.js'
@@ -57,7 +57,7 @@ router.post('/:id/submissions', ...auth, uploadRateLimiter, upload.single('file'
           error: `File type "${detected?.ext ?? 'unknown'}" is not allowed. Accepted: PDF, Word, PowerPoint, Excel, ZIP, images, video.`,
         })
       }
-      fileUrl = await uploadToCloudinary(req.file.buffer, { folder: 'nelms/submissions' })
+      fileUrl = await uploadToBlob(req.file.buffer, req.file.originalname, { folder: 'nelms/submissions' })
     }
 
     const now = new Date()

@@ -3,7 +3,7 @@ import { requireAuth } from '../middleware/auth.js'
 import { populateUser } from '../middleware/populateUser.js'
 import { enforceStatus } from '../middleware/enforceStatus.js'
 import { upload } from '../lib/multer.js'
-import { uploadToCloudinary } from '../lib/cloudinary.js'
+import { uploadToBlob } from '../lib/vercelBlob.js'
 import Material from '../models/Material.js'
 import Course from '../models/Course.js'
 import multer from 'multer'
@@ -43,8 +43,7 @@ router.post('/', ...auth, handleUploadMiddleware, async (req, res, next) => {
 
     let fileUrl = req.body.url ?? ''
     if (req.file) {
-      const resourceType = type === 'video' || req.file.mimetype.startsWith('video/') ? 'video' : 'auto'
-      fileUrl = await uploadToCloudinary(req.file.buffer, { folder: 'nelms/materials', resource_type: resourceType })
+      fileUrl = await uploadToBlob(req.file.buffer, req.file.originalname, { folder: 'nelms/materials' })
     }
     if (!fileUrl) return res.status(400).json({ error: 'A file or URL is required' })
 
