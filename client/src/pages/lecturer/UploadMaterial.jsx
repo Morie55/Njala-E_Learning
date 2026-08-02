@@ -225,29 +225,6 @@ export default function UploadMaterial() {
               </select>
             </div>
 
-            {/* Select Course to Upload File to */}
-            <div>
-              <label htmlFor="mat-course" className="block text-[12px] font-bold text-[#44474f] uppercase tracking-wider mb-1">
-                Select Course
-              </label>
-              <select
-                id="mat-course"
-                value={courseId}
-                onChange={(e) => setCourseId(e.target.value)}
-                required
-                className="w-full border border-[#c4c6d0] rounded-md px-3 py-2.5 text-[14px] focus:outline-none focus:border-[#03224d] transition-all bg-white"
-              >
-                <option value="" disabled>— Select a course —</option>
-                {courses.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.code ? `${c.code} · ` : ''}{c.title}
-                    {c.status === 'active' ? '' : ` (${c.status})`}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-
             {/* Video info banner */}
             {form.type === 'video' && (
               <div className="bg-[#f0eded] border border-[#c4c6d0] rounded-lg p-3 flex items-start gap-2.5">
