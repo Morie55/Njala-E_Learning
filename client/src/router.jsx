@@ -216,6 +216,7 @@ const router = createBrowserRouter([
       { path: 'courses/:id/assignments',              element: <RequireRole allowedRoles={['lecturer','dept_head','admin']}><CourseAssignments /></RequireRole> },
       { path: 'courses/:id/assignments/new',          element: <RequireRole allowedRoles={['lecturer','dept_head','admin']}><CreateAssignment /></RequireRole> },
       { path: 'assignments/:id/submissions',          element: <RequireRole allowedRoles={['lecturer','dept_head','admin']}><GradeSubmissions /></RequireRole> },
+      { path: 'materials/upload',                        element: <RequireRole allowedRoles={['lecturer','dept_head','admin']}><UploadMaterial /></RequireRole> },
       { path: 'courses/:id/materials/upload',         element: <RequireRole allowedRoles={['lecturer','dept_head','admin']}><UploadMaterial /></RequireRole> },
       { path: 'announcements/new',                    element: <RequireRole allowedRoles={['lecturer','dept_head','admin']}><PostAnnouncement /></RequireRole> },
       { path: 'courses/:courseId/attendance',         element: <RequireRole allowedRoles={['lecturer','dept_head','admin']}><AttendanceTracker /></RequireRole> },
