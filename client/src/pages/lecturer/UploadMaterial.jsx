@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
 import api from '../../lib/api'
 
-const MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024 // 15 MB
+const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024 // 100 MB
 
 export default function UploadMaterial() {
   const { id: paramCourseId } = useParams()   // present when routed via /courses/:id/materials/upload
@@ -44,7 +44,7 @@ export default function UploadMaterial() {
     if (selectedFile.size > MAX_FILE_SIZE_BYTES) {
       const sizeMB = (selectedFile.size / (1024 * 1024)).toFixed(1)
       setError(
-        `File size (${sizeMB} MB) exceeds the 15 MB limit. For large videos, choose the "External Link" option and paste a YouTube, Vimeo, or Google Drive link instead.`
+        `File size (${sizeMB} MB) exceeds the 100 MB limit. For very large videos, choose the "External Link" option and paste a YouTube, Vimeo, or Google Drive link instead.`
       )
       setFile(null)
       return
@@ -230,10 +230,10 @@ export default function UploadMaterial() {
               <div className="bg-[#f0eded] border border-[#c4c6d0] rounded-lg p-3 flex items-start gap-2.5">
                 <span className="material-symbols-outlined text-[20px] text-[#03224d] shrink-0">info</span>
                 <p className="text-[12px] text-[#44474f] leading-relaxed">
-                  <strong className="text-[#03224d]">Direct upload limit: 15 MB.</strong>{' '}
-                  For full-length lectures use{' '}
+                  <strong className="text-[#03224d]">Direct video upload limit: 100 MB.</strong>{' '}
+                  For very large lecture recordings, you can also select{' '}
                   <span className="font-bold text-[#03224d]">External Link</span>{' '}
-                  to share a YouTube, Vimeo, or Google Drive URL instead.
+                  to share a YouTube, Vimeo, or Google Drive URL.
                 </p>
               </div>
             )}
@@ -281,14 +281,14 @@ export default function UploadMaterial() {
                         <input
                           type="file"
                           className="hidden"
-                          accept=".pdf,.ppt,.pptx,.doc,.docx,.zip,.mp4,.webm"
+                          accept=".pdf,.ppt,.pptx,.doc,.docx,.zip,.mp4,.webm,.mov,.avi,.mkv,.mp3"
                           onChange={(e) => {
                             if (e.target.files[0]) handleFileSelect(e.target.files[0])
                           }}
                         />
                       </label>
                       <p className="text-[12px] text-[#44474f] mt-1">
-                        PDF, PPTX, DOCX, ZIP, MP4 / WEBM · Max 15 MB
+                        PDF, PPTX, DOCX, ZIP, MP4 / WEBM / MOV · Max 100 MB
                       </p>
                     </>
                   )}

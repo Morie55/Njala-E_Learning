@@ -17,7 +17,7 @@ function handleUploadMiddleware(req, res, next) {
     if (err) {
       if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
         return res.status(400).json({
-          error: 'File size exceeds the 15 MB limit for direct uploads. Please compress the file or use an External Link (YouTube/Vimeo/Drive) for large media.',
+          error: 'File size exceeds the 100 MB limit for direct uploads. Please compress the file or use an External Link (YouTube/Vimeo/Drive) for larger video files.',
         })
       }
       return res.status(400).json({ error: err.message || 'File upload error' })

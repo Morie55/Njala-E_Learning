@@ -5,22 +5,27 @@ const storage = multer.memoryStorage()
 
 export const upload = multer({
   storage,
-  limits: { fileSize: 15 * 1024 * 1024 }, // 15 MB limit for direct document uploads
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100 MB limit for course material & video uploads
   fileFilter: (_req, file, cb) => {
-    const allowed = [
+    const allowedDocTypes = [
       'application/pdf',
       'application/vnd.ms-powerpoint',
       'application/vnd.openxmlformats-officedocument.presentationml.presentation',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/zip',
+      'application/x-zip-compressed',
     ]
-    if (allowed.includes(file.mimetype)) {
+
+    if (
+      allowedDocTypes.includes(file.mimetype) ||
+      file.mimetype.startsWith('video/') ||
+      file.mimetype.startsWith('audio/') ||
+      file.mimetype.startsWith('image/')
+    ) {
       return cb(null, true)
     }
-    if (file.mimetype.startsWith('video/')) {
-      return cb(new Error('Direct video file uploads are disabled to conserve bandwidth. Please select External Link to share YouTube, Vimeo, or Google Drive video links.'))
-    }
-    cb(new Error(`Unsupported file type: ${file.mimetype}. Allowed types: PDF, PPT, PPTX, DOC, DOCX, ZIP.`))
+
+    cb(new Error(`Unsupported file type: ${file.mimetype}. Allowed types: PDF, PPT, PPTX, DOC, DOCX, ZIP, MP4, WEBM, MOV, MP3.`))
   },
 })
