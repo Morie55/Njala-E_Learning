@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import AppLayout from '../../components/layout/AppLayout'
 import LoadingSkeleton from '../../components/ui/LoadingSkeleton'
 import api from '../../lib/api'
+import { useUser } from '../../hooks/useUser'
 
 const STATUS_STYLES = {
   completed: 'bg-[#a0f3d4] text-[#00513e]',
@@ -15,6 +16,7 @@ function formatSLE(amount) {
 }
 
 export default function PaymentManagement() {
+  const { role } = useUser()
   const [payments, setPayments] = useState([])
   const [loading, setLoading] = useState(true)
   const [total, setTotal] = useState(0)
@@ -40,9 +42,9 @@ export default function PaymentManagement() {
   }
 
   // Revenue summary from current page
-  const completedRevenue = payments
-    .filter(p => p.status === 'completed')
-    .reduce((sum, p) => sum + p.amount, 0)
+  const completedRevenue = (payments || [])
+    .filter(p => p && p.status === 'completed')
+    .reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
 
   function handleExportCSV() {
     const lines = [
@@ -65,7 +67,7 @@ export default function PaymentManagement() {
   }
 
   return (
-    <AppLayout role="admin">
+    <AppLayout role={role}>
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
         <div>
           <h2 className="text-[32px] font-semibold text-[#03224d]">Payment Ledger</h2>
@@ -80,8 +82,8 @@ export default function PaymentManagement() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         {[
           { label: 'Total Payments', value: total, icon: 'receipt_long', color: 'text-[#03224d]' },
-          { label: 'Completed', value: payments.filter(p => p.status === 'completed').length, icon: 'check_circle', color: 'text-[#086b53]' },
-          { label: 'Pending', value: payments.filter(p => p.status === 'pending').length, icon: 'pending', color: 'text-[#dd9235]' },
+          { label: 'Completed', value: (payments || []).filter(p => p && p.status === 'completed').length, icon: 'check_circle', color: 'text-[#086b53]' },
+          { label: 'Pending', value: (payments || []).filter(p => p && p.status === 'pending').length, icon: 'pending', color: 'text-[#dd9235]' },
           { label: 'Revenue (SLE)', value: formatSLE(completedRevenue), icon: 'payments', color: 'text-[#086b53]' },
         ].map(k => (
           <div key={k.label} className="bg-white border border-[#c4c6d0] rounded-2xl p-4 shadow-sm">

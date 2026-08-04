@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { useUser } from '../../hooks/useUser'
 import AppLayout from '../../components/layout/AppLayout'
 import api from '../../lib/api'
@@ -76,7 +76,7 @@ export default function Timetable() {
   const slotsForDay = (day) => slots.filter(s => s.dayOfWeek === day)
 
   return (
-    <AppLayout>
+    <AppLayout role={role}>
     <div className="space-y-5">
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl text-white text-[13px] font-bold shadow-lg ${toast.type === 'error' ? 'bg-[#ba1a1a]' : 'bg-[#086b53]'}`}>
@@ -121,8 +121,8 @@ export default function Timetable() {
 
               {/* Hour rows */}
               {HOURS.map(h => (
-                <>
-                  <div key={`h-${h}`} className="border-b border-r border-[#c4c6d0] py-2 px-2 text-right">
+                <Fragment key={`h-${h}`}>
+                  <div className="border-b border-r border-[#c4c6d0] py-2 px-2 text-right">
                     <span className="text-[10px] font-bold text-[#9e9e9e]">{h.toString().padStart(2, '0')}:00</span>
                   </div>
                   {WORK_DAYS.map(d => {
@@ -157,7 +157,7 @@ export default function Timetable() {
                       </div>
                     )
                   })}
-                </>
+                </Fragment>
               ))}
             </div>
           </div>

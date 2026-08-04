@@ -103,7 +103,8 @@ function RequireRole({ allowedRoles, children }) {
 
 /** Polymorphic /dashboard route — renders the role-appropriate dashboard. */
 function RoleDashboard() {
-  const { role, dbUser } = useUser()
+  const { role, dbUser, isLoaded } = useUser()
+  if (!isLoaded) return <LayoutLoader />
   if (dbUser?.status === 'pending_activation') return <Navigate to="/activate" replace />
   if (role === 'admin') return <AdminDashboard />
   if (role === 'dept_head') return <DeptDashboard />
@@ -114,7 +115,8 @@ function RoleDashboard() {
 
 /** Polymorphic /courses route — student sees MyCourses, lecturer sees CourseManagement. */
 function CoursesPage() {
-  const { role } = useUser()
+  const { role, isLoaded } = useUser()
+  if (!isLoaded) return <LayoutLoader />
   if (role === 'student' || role === 'alumni') return <MyCourses />
   if (role === 'lecturer' || role === 'admin') return <CourseManagement />
   if (role === 'dept_head') return <CourseOversight />
@@ -123,7 +125,8 @@ function CoursesPage() {
 
 /** Polymorphic /settings route. */
 function SettingsPage() {
-  const { role } = useUser()
+  const { role, isLoaded } = useUser()
+  if (!isLoaded) return <LayoutLoader />
   if (role === 'admin') return <SystemSettings />
   if (role === 'dept_head') return <DeptHeadSettings />
   if (role === 'lecturer') return <LecturerSettings />
@@ -132,7 +135,8 @@ function SettingsPage() {
 
 /** Polymorphic /payments route — student sees StudentPayments, admin/dept_head sees PaymentManagement. */
 function PaymentsPage() {
-  const { role } = useUser()
+  const { role, isLoaded } = useUser()
+  if (!isLoaded) return <LayoutLoader />
   if (role === 'admin' || role === 'dept_head') return <PaymentManagement />
   return <StudentPayments />
 }
@@ -193,7 +197,7 @@ const router = createBrowserRouter([
       // ── Shared / Polymorphic ──
       { path: 'courses',  element: <CoursesPage /> },
       { path: 'settings', element: <SettingsPage /> },
-      { path: 'payments', element: <PaymentsPage /> },
+      { path: 'payments', element: <RequireRole allowedRoles={['student', 'lecturer', 'dept_head', 'admin', 'alumni']}><PaymentsPage /></RequireRole> },
 
       // ── Student ──
       { path: 'courses/:id',   element: <RequireRole allowedRoles={['student', 'lecturer', 'dept_head', 'admin']}><CourseDetail /></RequireRole> },
@@ -233,7 +237,7 @@ const router = createBrowserRouter([
       { path: 'analytics',          element: <RequireRole allowedRoles={['admin']}><Analytics /></RequireRole> },
       { path: 'audit-logs',         element: <RequireRole allowedRoles={['admin']}><AuditLogs /></RequireRole> },
       { path: 'dept-report',        element: <RequireRole allowedRoles={['admin','dept_head']}><DepartmentReport /></RequireRole> },
-      { path: 'academic-calendar',  element: <RequireRole allowedRoles={['admin', 'dept_head']}><AcademicCalendar /></RequireRole> },
+      { path: 'academic-calendar',  element: <RequireRole allowedRoles={['student', 'lecturer', 'dept_head', 'admin', 'alumni']}><AcademicCalendar /></RequireRole> },
 
       // ── Shared Phase 5 ──
       { path: 'timetable',          element: <RequireRole allowedRoles={['student','lecturer','dept_head','admin','alumni']}><Timetable /></RequireRole> },

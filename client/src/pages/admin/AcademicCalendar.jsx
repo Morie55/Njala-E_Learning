@@ -80,11 +80,15 @@ export default function AcademicCalendar() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-[22px] font-black text-[#1b1c1c]">Academic Calendar</h1>
-          <p className="text-[13px] text-[#747780]">Manage semester periods and enrollment windows</p>
+          <p className="text-[13px] text-[#747780]">
+            {role === 'admin' ? 'Manage semester periods and enrollment windows' : 'View semester periods and enrollment windows'}
+          </p>
         </div>
-        <button onClick={openCreate} className="flex items-center gap-2 bg-[#03224d] text-white px-4 py-2 rounded-xl text-[13px] font-bold hover:bg-[#1f3864] transition-colors">
-          <span className="material-symbols-outlined text-[18px]">add</span> New Period
-        </button>
+        {role === 'admin' && (
+          <button onClick={openCreate} className="flex items-center gap-2 bg-[#03224d] text-white px-4 py-2 rounded-xl text-[13px] font-bold hover:bg-[#1f3864] transition-colors">
+            <span className="material-symbols-outlined text-[18px]">add</span> New Period
+          </button>
+        )}
       </div>
 
       {/* Active period banner */}
@@ -138,7 +142,9 @@ export default function AcademicCalendar() {
         <div className="text-center py-16 bg-white rounded-2xl border border-[#c4c6d0]">
           <span className="material-symbols-outlined text-5xl text-[#c4c6d0] block mb-3">calendar_month</span>
           <p className="text-[14px] font-bold text-[#44474f]">No academic periods yet</p>
-          <p className="text-[12px] text-[#9e9e9e]">Create your first period to get started</p>
+          <p className="text-[12px] text-[#9e9e9e]">
+            {role === 'admin' ? 'Create your first period to get started' : 'Academic periods will appear here once created by an administrator'}
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -152,20 +158,22 @@ export default function AcademicCalendar() {
                     <p className="text-[11px] text-[#747780]">{p.academicYear} — {p.semester}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {!p.isActive && (
-                    <button onClick={() => handleActivate(p._id)} disabled={activating === p._id}
-                      className="text-[11px] font-bold px-3 py-1.5 bg-[#d8e2ff] text-[#001a41] rounded-lg hover:bg-[#03224d] hover:text-white transition-colors disabled:opacity-50">
-                      {activating === p._id ? '…' : 'Activate'}
+                {role === 'admin' && (
+                  <div className="flex items-center gap-2">
+                    {!p.isActive && (
+                      <button onClick={() => handleActivate(p._id)} disabled={activating === p._id}
+                        className="text-[11px] font-bold px-3 py-1.5 bg-[#d8e2ff] text-[#001a41] rounded-lg hover:bg-[#03224d] hover:text-white transition-colors disabled:opacity-50">
+                        {activating === p._id ? '…' : 'Activate'}
+                      </button>
+                    )}
+                    <button onClick={() => openEdit(p)} className="p-1.5 text-[#747780] hover:bg-[#f6f3f2] rounded-lg transition-colors">
+                      <span className="material-symbols-outlined text-[18px]">edit</span>
                     </button>
-                  )}
-                  <button onClick={() => openEdit(p)} className="p-1.5 text-[#747780] hover:bg-[#f6f3f2] rounded-lg transition-colors">
-                    <span className="material-symbols-outlined text-[18px]">edit</span>
-                  </button>
-                  <button onClick={() => handleDelete(p._id)} className="p-1.5 text-[#ba1a1a] hover:bg-[#ffdad6] rounded-lg transition-colors">
-                    <span className="material-symbols-outlined text-[18px]">delete</span>
-                  </button>
-                </div>
+                    <button onClick={() => handleDelete(p._id)} className="p-1.5 text-[#ba1a1a] hover:bg-[#ffdad6] rounded-lg transition-colors">
+                      <span className="material-symbols-outlined text-[18px]">delete</span>
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 text-center">
                 {[
