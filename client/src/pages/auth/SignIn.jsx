@@ -99,7 +99,8 @@ export default function SignIn() {
                 identityPreviewText: 'text-[#1b1c1c] font-medium text-xs sm:text-sm',
               },
             }}
-            redirectUrl="/dashboard"
+            fallbackRedirectUrl="/dashboard"
+            forceRedirectUrl="/dashboard"
           />
 
           {/* IT Support Footer */}
