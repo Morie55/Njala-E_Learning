@@ -137,7 +137,7 @@ export default function AlumniDashboard() {
               <h3 className="font-bold text-[16px] text-[#03224d]">Alumni Support</h3>
               <p className="text-[13px] text-[#44474f]">Request certified physical copies or career reference letters from IT.</p>
               <a
-                href="mailto:kmorie18c@njala.edu.sl?subject=NELMS%20Alumni%20Transcript%20Request"
+                href="mailto:support@njala.edu.sl?subject=NELMS%20Alumni%20Transcript%20Request"
                 className="w-full mt-2 block text-center border border-[#03224d] text-[#03224d] py-2.5 rounded-xl text-[12px] font-bold hover:bg-[#03224d]/5 transition-colors cursor-pointer"
               >
                 Contact Admissions IT

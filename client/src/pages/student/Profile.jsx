@@ -162,11 +162,11 @@ export default function Profile() {
             <h3 className="text-[16px] font-semibold mb-2">Need to update your profile?</h3>
             <p className="text-[13px] opacity-80 mb-4">Contact IT support to update your name, ID number, or department assignment.</p>
             <a
-              href="mailto:kmorie18c@njala.edu.sl?subject=NELMS%20Profile%20Update%20Request"
+              href="mailto:support@njala.edu.sl?subject=NELMS%20Profile%20Update%20Request"
               className="inline-flex items-center gap-2 bg-white text-[#03224d] px-4 py-2 rounded-lg text-[12px] font-bold hover:bg-white/90 transition-colors"
             >
               <span className="material-symbols-outlined text-[16px]">mail</span>
-              kmorie18c@njala.edu.sl
+              support@njala.edu.sl
             </a>
           </div>
         </div>

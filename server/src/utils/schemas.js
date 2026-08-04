@@ -24,7 +24,9 @@ export const createAssignmentSchema = z.object({
 
 export const createAnnouncementSchema = z.object({
   courseId: z.string().optional().default('global'),
+  title: z.string().optional().default('Announcement'),
   message: z.string().min(3, 'Announcement message must be at least 3 characters'),
+  targetRole: z.enum(['all', 'student', 'lecturer', 'dept_head']).optional().default('all'),
 })
 
 export const updateUserRoleSchema = z.object({

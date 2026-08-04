@@ -14,7 +14,8 @@ const DEFAULT_SCHOOLS = [
 const BY_SCHOOL_CODE = {
   TECH: [
     { name: 'Computer Science', code: 'CSC' },
-    { name: 'Information Technology', code: 'IT' },
+    { name: 'Information Technology', code: 'BIT' },
+    { name: 'Electronics & Telecommunications Engineering', code: 'ETE' },
     { name: 'Agricultural Engineering', code: 'AGE' },
     { name: 'Civil Engineering', code: 'CVE' },
     { name: 'Mechanical Engineering', code: 'MEE' },

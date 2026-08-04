@@ -4,6 +4,7 @@ import AppLayout from '../../components/layout/AppLayout'
 import api from '../../lib/api'
 
 export default function BulkImportUsers() {
+  const [activeTab, setActiveTab] = useState('csv') // 'csv' | 'batch'
   const [csvText, setCsvText] = useState('')
   const [parsedRows, setParsedRows] = useState([])
   const [schools, setSchools] = useState([])
@@ -13,6 +14,12 @@ export default function BulkImportUsers() {
   const [importing, setImporting] = useState(false)
   const [results, setResults] = useState(null)
   const [error, setError] = useState('')
+
+  // Batch Generation state
+  const [batchDept, setBatchDept] = useState('')
+  const [batchCount, setBatchCount] = useState(10)
+  const [batchRole, setBatchRole] = useState('student')
+  const [generatingBatch, setGeneratingBatch] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -111,10 +118,36 @@ export default function BulkImportUsers() {
     }
   }
 
+  async function handleBatchGenerate() {
+    if (!batchDept) {
+      setError('Please select a target department for batch generation.')
+      return
+    }
+    if (batchCount < 1 || batchCount > 100) {
+      setError('Batch count must be between 1 and 100.')
+      return
+    }
+
+    setGeneratingBatch(true)
+    setError('')
+    try {
+      const res = await api.post('/admin/users/batch-generate', {
+        departmentId: batchDept,
+        count: batchCount,
+        role: batchRole,
+      })
+      setResults(res.data?.results ?? [])
+    } catch (err) {
+      setError(err.response?.data?.error ?? err.message ?? 'Failed to generate batch accounts.')
+    } finally {
+      setGeneratingBatch(false)
+    }
+  }
+
   function copyPinRoster() {
     if (!results) return
-    const header = 'Full Name\tEmail\tRole\tStatus\tTemporary PIN\n'
-    const content = results.map(r => `${r.fullName || ''}\t${r.email}\t${r.role || ''}\t${r.status}\t${r.pin}`).join('\n')
+    const header = 'ID Number\tFull Name\tEmail\tRole\tStatus\tTemporary PIN\n'
+    const content = results.map(r => `${r.idNumber || ''}\t${r.fullName || ''}\t${r.email}\t${r.role || ''}\t${r.status}\t${r.pin || ''}`).join('\n')
     navigator.clipboard.writeText(header + content)
     alert('Temporary PIN roster copied to clipboard!')
   }
@@ -124,90 +157,203 @@ export default function BulkImportUsers() {
       <nav className="flex items-center gap-2 text-[12px] font-bold text-[#44474f] mb-6">
         <Link to="/users" className="hover:text-[#03224d]">User Management</Link>
         <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-        <span className="text-[#03224d]">Bulk Registrar Import</span>
+        <span className="text-[#03224d]">Batch Provisioning & Import</span>
       </nav>
 
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-[32px] font-semibold text-[#03224d]">Bulk Registrar User Import</h2>
+          <h2 className="text-[32px] font-semibold text-[#03224d]">Batch Account Provisioning</h2>
           <p className="text-[14px] text-[#44474f]">
-            Import new students, lecturers, or staff via CSV. Temporary 6-digit PINs will be generated for first-time login activation.
+            Bulk import users from CSV or instantly generate N accounts with auto-assigned Student IDs and temporary PINs.
           </p>
         </div>
       </div>
 
+      {/* Mode Tabs */}
+      {!results && (
+        <div className="flex gap-2 border-b border-[#c4c6d0] mb-6">
+          <button
+            onClick={() => { setActiveTab('csv'); setError('') }}
+            className={`px-5 py-2.5 text-[14px] font-bold border-b-2 flex items-center gap-2 transition-all ${
+              activeTab === 'csv'
+                ? 'border-[#03224d] text-[#03224d]'
+                : 'border-transparent text-[#44474f] hover:text-[#03224d]'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">upload_file</span>
+            CSV Bulk Import
+          </button>
+          <button
+            onClick={() => { setActiveTab('batch'); setError('') }}
+            className={`px-5 py-2.5 text-[14px] font-bold border-b-2 flex items-center gap-2 transition-all ${
+              activeTab === 'batch'
+                ? 'border-[#03224d] text-[#03224d]'
+                : 'border-transparent text-[#44474f] hover:text-[#03224d]'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">group_add</span>
+            Instant Program Batch Generator (Set of N)
+          </button>
+        </div>
+      )}
+
       {!results ? (
         <div className="space-y-6">
-          {/* Controls box */}
-          <div className="bg-white border border-[#c4c6d0] rounded-xl p-6 shadow-sm space-y-5">
-            <h3 className="font-bold text-[16px] text-[#03224d] flex items-center gap-2">
-              <span className="material-symbols-outlined text-[20px]">upload_file</span>
-              1. Select CSV File or Paste Records
-            </h3>
+          {activeTab === 'csv' ? (
+            /* CSV Controls box */
+            <div className="bg-white border border-[#c4c6d0] rounded-xl p-6 shadow-sm space-y-5">
+              <h3 className="font-bold text-[16px] text-[#03224d] flex items-center gap-2">
+                <span className="material-symbols-outlined text-[20px]">upload_file</span>
+                1. Select CSV File or Paste Records
+              </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[12px] font-bold text-[#44474f] uppercase tracking-wider mb-2">
+                    Upload CSV File
+                  </label>
+                  <input
+                    type="file"
+                    accept=".csv,.txt"
+                    onChange={handleFileUpload}
+                    className="w-full text-[13px] text-[#44474f] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-[12px] file:font-bold file:bg-[#03224d] file:text-white hover:file:opacity-90 cursor-pointer"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[12px] font-bold text-[#44474f] uppercase tracking-wider mb-1">
+                      Assign School (Optional)
+                    </label>
+                    <select
+                      value={selectedSchool}
+                      onChange={e => setSelectedSchool(e.target.value)}
+                      className="w-full border border-[#c4c6d0] rounded-md px-3 py-2 text-[13px] bg-white focus:outline-none focus:border-[#03224d]"
+                    >
+                      <option value="">All / None</option>
+                      {schools.map(s => <option key={s._id} value={s._id}>{s.name} ({s.code})</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-bold text-[#44474f] uppercase tracking-wider mb-1">
+                      Assign Department (Optional)
+                    </label>
+                    <select
+                      value={selectedDept}
+                      onChange={e => setSelectedDept(e.target.value)}
+                      className="w-full border border-[#c4c6d0] rounded-md px-3 py-2 text-[13px] bg-white focus:outline-none focus:border-[#03224d]"
+                    >
+                      <option value="">All / None</option>
+                      {departments.map(d => <option key={d._id} value={d._id}>{d.name} ({d.code})</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               <div>
-                <label className="block text-[12px] font-bold text-[#44474f] uppercase tracking-wider mb-2">
-                  Upload CSV File
+                <label className="block text-[12px] font-bold text-[#44474f] uppercase tracking-wider mb-1">
+                  Raw CSV Data (Format: email, fullName, role, idNumber)
                 </label>
-                <input
-                  type="file"
-                  accept=".csv,.txt"
-                  onChange={handleFileUpload}
-                  className="w-full text-[13px] text-[#44474f] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-[12px] file:font-bold file:bg-[#03224d] file:text-white hover:file:opacity-90 cursor-pointer"
+                <textarea
+                  rows={5}
+                  value={csvText}
+                  onChange={e => handleTextChange(e.target.value)}
+                  placeholder={`email, fullName, role, idNumber\ns20261001@njala.edu.sl, Mariama Kamara, student, 20261001\nj.smith@njala.edu.sl, Dr. John Smith, lecturer, L8840`}
+                  className="w-full border border-[#c4c6d0] rounded-lg p-3 text-[13px] font-mono focus:outline-none focus:border-[#03224d] bg-[#fbf9f8]"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {error && (
+                <p className="text-[13px] text-[#ba1a1a] font-medium flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[16px]">error</span>
+                  {error}
+                </p>
+              )}
+            </div>
+          ) : (
+            /* Instant Batch Generator box */
+            <div className="bg-white border border-[#c4c6d0] rounded-xl p-6 shadow-sm space-y-6">
+              <div>
+                <h3 className="font-bold text-[18px] text-[#03224d] flex items-center gap-2 mb-1">
+                  <span className="material-symbols-outlined text-[22px] text-[#086b53]">auto_awesome</span>
+                  Instant Program Batch Generator
+                </h3>
+                <p className="text-[13px] text-[#44474f]">
+                  Generate a set of accounts for a specific program (e.g. 10 student accounts for Computer Science). Each account is automatically assigned a unique Student ID (e.g. <code>CSC/2026/0001</code>) and temporary 6-digit PIN.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[12px] font-bold text-[#44474f] uppercase tracking-wider mb-1">
-                    Assign School (Optional)
+                    Target Department / Program *
                   </label>
                   <select
-                    value={selectedSchool}
-                    onChange={e => setSelectedSchool(e.target.value)}
-                    className="w-full border border-[#c4c6d0] rounded-md px-3 py-2 text-[13px] bg-white focus:outline-none focus:border-[#03224d]"
+                    value={batchDept}
+                    onChange={e => setBatchDept(e.target.value)}
+                    className="w-full border border-[#c4c6d0] rounded-md px-3 py-2.5 text-[14px] bg-white focus:outline-none focus:border-[#03224d] font-semibold text-[#03224d]"
                   >
-                    <option value="">All / None</option>
-                    {schools.map(s => <option key={s._id} value={s._id}>{s.name} ({s.code})</option>)}
+                    <option value="">-- Select Department --</option>
+                    {departments.map(d => (
+                      <option key={d._id} value={d._id}>
+                        {d.name} ({d.code})
+                      </option>
+                    ))}
                   </select>
                 </div>
+
                 <div>
                   <label className="block text-[12px] font-bold text-[#44474f] uppercase tracking-wider mb-1">
-                    Assign Department (Optional)
+                    Number of Accounts (1–100) *
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={batchCount}
+                    onChange={e => setBatchCount(parseInt(e.target.value) || 1)}
+                    className="w-full border border-[#c4c6d0] rounded-md px-3 py-2.5 text-[14px] bg-white focus:outline-none focus:border-[#03224d] font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[12px] font-bold text-[#44474f] uppercase tracking-wider mb-1">
+                    Role *
                   </label>
                   <select
-                    value={selectedDept}
-                    onChange={e => setSelectedDept(e.target.value)}
-                    className="w-full border border-[#c4c6d0] rounded-md px-3 py-2 text-[13px] bg-white focus:outline-none focus:border-[#03224d]"
+                    value={batchRole}
+                    onChange={e => setBatchRole(e.target.value)}
+                    className="w-full border border-[#c4c6d0] rounded-md px-3 py-2.5 text-[14px] bg-white focus:outline-none focus:border-[#03224d] capitalize"
                   >
-                    <option value="">All / None</option>
-                    {departments.map(d => <option key={d._id} value={d._id}>{d.name} ({d.code})</option>)}
+                    <option value="student">Student</option>
+                    <option value="lecturer">Lecturer</option>
+                    <option value="dept_head">Department Head</option>
                   </select>
                 </div>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-[12px] font-bold text-[#44474f] uppercase tracking-wider mb-1">
-                Raw CSV Data (Format: email, fullName, role, idNumber)
-              </label>
-              <textarea
-                rows={5}
-                value={csvText}
-                onChange={e => handleTextChange(e.target.value)}
-                placeholder={`email, fullName, role, idNumber\ns20261001@njala.edu.sl, Mariama Kamara, student, 20261001\nj.smith@njala.edu.sl, Dr. John Smith, lecturer, L8840`}
-                className="w-full border border-[#c4c6d0] rounded-lg p-3 text-[13px] font-mono focus:outline-none focus:border-[#03224d] bg-[#fbf9f8]"
-              />
-            </div>
+              {error && (
+                <p className="text-[13px] text-[#ba1a1a] font-medium flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[16px]">error</span>
+                  {error}
+                </p>
+              )}
 
-            {error && (
-              <p className="text-[13px] text-[#ba1a1a] font-medium flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">error</span>
-                {error}
-              </p>
-            )}
-          </div>
+              <div className="pt-2 flex justify-end">
+                <button
+                  onClick={handleBatchGenerate}
+                  disabled={generatingBatch || !batchDept}
+                  className="bg-[#03224d] text-white px-6 py-3 rounded-lg text-[14px] font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2 shadow-sm"
+                >
+                  {generatingBatch ? (
+                    <><span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> Generating Batch Accounts…</>
+                  ) : (
+                    <><span className="material-symbols-outlined text-[18px]">bolt</span> Generate {batchCount} Accounts Now</>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Preview Table */}
           {parsedRows.length > 0 && (
@@ -299,6 +445,7 @@ export default function BulkImportUsers() {
             <table className="w-full text-left border-collapse">
               <thead className="bg-[#f6f3f2]">
                 <tr>
+                  <th className="px-6 py-3 text-[12px] font-bold text-[#44474f] uppercase tracking-wider">ID Number</th>
                   <th className="px-6 py-3 text-[12px] font-bold text-[#44474f] uppercase tracking-wider">Email Address</th>
                   <th className="px-6 py-3 text-[12px] font-bold text-[#44474f] uppercase tracking-wider">Full Name</th>
                   <th className="px-6 py-3 text-[12px] font-bold text-[#44474f] uppercase tracking-wider">Status</th>
@@ -308,6 +455,7 @@ export default function BulkImportUsers() {
               <tbody className="divide-y divide-[#c4c6d0]">
                 {results.map((r, i) => (
                   <tr key={i} className="hover:bg-[#f6f3f2]">
+                    <td className="px-6 py-3 text-[13px] font-mono font-bold text-[#03224d]">{r.idNumber || '—'}</td>
                     <td className="px-6 py-3 text-[13px] font-bold text-[#03224d]">{r.email}</td>
                     <td className="px-6 py-3 text-[13px] text-[#1b1c1c]">{r.fullName || '—'}</td>
                     <td className="px-6 py-3 text-[12px]">

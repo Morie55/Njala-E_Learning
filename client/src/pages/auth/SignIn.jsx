@@ -106,7 +106,7 @@ export default function SignIn() {
           <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-[#c4c6d0] text-center">
             <p className="text-xs sm:text-sm text-[#44474f]">
               Trouble signing in?{' '}
-              <a href="mailto:kmorie18c@njala.edu.sl" className="text-[#03224d] font-bold hover:underline">
+              <a href="mailto:support@njala.edu.sl" className="text-[#03224d] font-bold hover:underline">
                 Contact IT Support
               </a>
             </p>

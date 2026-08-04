@@ -18,7 +18,7 @@ const auth = [requireAuth, populateUser, enforceStatus]
 router.get('/me', ...auth, async (req, res, next) => {
   try {
     const subs = await Submission.find({ studentId: req.dbUser._id })
-      .populate({ path: 'assignmentId', select: 'title maxScore courseId dueDate', populate: { path: 'courseId', select: 'code title' } })
+      .populate({ path: 'assignmentId', select: 'title maxScore courseId dueDate', populate: { path: 'courseId', select: 'code title semester' } })
       .sort({ submittedAt: -1 }).lean()
     const enriched = subs.map(s => ({
       ...s,
@@ -28,6 +28,7 @@ router.get('/me', ...auth, async (req, res, next) => {
       courseId: s.assignmentId?.courseId?._id?.toString() ?? null,
       courseCode: s.assignmentId?.courseId?.code,
       courseTitle: s.assignmentId?.courseId?.title,
+      courseSemester: s.assignmentId?.courseId?.semester || 'Unassigned',
     }))
     res.json({ submissions: enriched })
   } catch (err) { next(err) }

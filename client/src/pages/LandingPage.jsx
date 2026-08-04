@@ -468,8 +468,8 @@ export default function LandingPage() {
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider text-white mb-3">Support & Help</h4>
               <p className="text-xs text-white/60 mb-2">Need assistance with your portal account?</p>
-              <a href="mailto:kmorie18c@njala.edu.sl" className="text-xs text-[#a0f3d4] font-semibold hover:underline block">
-                kmorie18c@njala.edu.sl
+              <a href="mailto:support@njala.edu.sl" className="text-xs text-[#a0f3d4] font-semibold hover:underline block">
+                support@njala.edu.sl
               </a>
             </div>
           </div>

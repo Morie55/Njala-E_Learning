@@ -11,6 +11,8 @@ import User from '../models/User.js'
 import { validateBody } from '../middleware/validate.js'
 import { createAnnouncementSchema } from '../utils/schemas.js'
 
+import { sendMail, templates } from '../utils/mailer.js'
+
 const router = Router()
 const auth = [requireAuth, populateUser, enforceStatus]
 
@@ -27,14 +29,29 @@ router.get('/', ...auth, async (req, res, next) => {
     } else if (role === 'student') {
       const enrollments = await Enrollment.find({ studentId: _id, status: 'active' }).lean()
       const courseIds = enrollments.map(e => e.courseId)
-      query = { $or: [{ courseId: { $in: courseIds } }, { courseId: null }] }
+      query = {
+        $or: [
+          { courseId: { $in: courseIds } },
+          { courseId: null, targetRole: { $in: ['all', 'student'] } }
+        ]
+      }
     } else if (role === 'lecturer') {
-      // Lecturers see only announcements from courses they own
       const ownedCourses = await Course.find({ lecturerId: _id }).select('_id').lean()
       const ownedIds = ownedCourses.map(c => c._id)
-      query = { courseId: { $in: ownedIds } }
+      query = {
+        $or: [
+          { courseId: { $in: ownedIds } },
+          { courseId: null, targetRole: { $in: ['all', 'lecturer'] } }
+        ]
+      }
+    } else if (role === 'dept_head') {
+      query = {
+        $or: [
+          { courseId: { $ne: null } },
+          { courseId: null, targetRole: { $in: ['all', 'dept_head'] } }
+        ]
+      }
     }
-    // dept_head and admin: query stays {} (sees all)
 
     const announcements = await Announcement.find(query)
       .sort({ createdAt: -1 }).limit(limit)
@@ -47,10 +64,10 @@ router.get('/', ...auth, async (req, res, next) => {
 
 /** POST /api/v1/announcements  [lecturer/admin/dept_head] */
 router.post('/', ...auth, validateBody(createAnnouncementSchema), async (req, res, next) => {
-  const { role, _id } = req.dbUser
+  const { role, _id, fullName } = req.dbUser
   if (!['lecturer', 'dept_head', 'admin'].includes(role)) return res.status(403).json({ error: 'Forbidden' })
   try {
-    const { courseId, message } = req.body
+    const { courseId, message, title = 'Announcement', targetRole = 'all' } = req.body
     const targetCourseId = courseId === 'global' ? null : courseId
 
     // Lecturers can only post to courses they own
@@ -62,15 +79,21 @@ router.post('/', ...auth, validateBody(createAnnouncementSchema), async (req, re
       }
     }
 
-    const announcement = await Announcement.create({ courseId: targetCourseId, message, postedBy: _id })
+    const announcement = await Announcement.create({
+      courseId: targetCourseId,
+      title,
+      message,
+      targetRole,
+      postedBy: _id,
+    })
 
-    // Dispatch notifications to target recipients
+    // Dispatch in-app notifications and broadcast emails
     if (targetCourseId) {
       const enrollments = await Enrollment.find({ courseId: targetCourseId, status: 'active' }).populate('studentId')
       const notifs = enrollments.map((e) => ({
         recipientId: e.studentId?.clerkId || e.studentId?._id?.toString(),
         senderId: req.auth.userId,
-        title: 'New Course Announcement',
+        title: `Announcement: ${title}`,
         message: message.slice(0, 100),
         type: 'announcement',
         link: `/courses/${targetCourseId}`,
@@ -78,17 +101,39 @@ router.post('/', ...auth, validateBody(createAnnouncementSchema), async (req, re
 
       if (notifs.length > 0) await Notification.insertMany(notifs)
     } else {
-      // Global announcement -> notify students
-      const students = await User.find({ role: 'student' }).lean()
-      const notifs = students.map((s) => ({
-        recipientId: s.clerkId || s._id.toString(),
+      // Global announcement -> target specified role(s)
+      const userFilter = { deletedAt: null }
+      if (targetRole !== 'all') {
+        userFilter.role = targetRole
+      }
+
+      const targetUsers = await User.find(userFilter).select('clerkId email fullName role').lean()
+
+      const notifs = targetUsers.map((u) => ({
+        recipientId: u.clerkId || u._id.toString(),
         senderId: req.auth.userId,
-        title: 'Platform Announcement',
+        title: `Broadcast: ${title}`,
         message: message.slice(0, 100),
         type: 'announcement',
         link: '/dashboard',
       }))
       if (notifs.length > 0) await Notification.insertMany(notifs)
+
+      // Send broadcast email to all targeted email addresses
+      for (const u of targetUsers) {
+        if (u.email && u.email.includes('@')) {
+          const emailData = templates.broadcastAnnouncement(
+            u.fullName || 'User',
+            fullName || 'Platform Administrator',
+            title,
+            message,
+            'https://nelms.njala.edu.sl/dashboard'
+          )
+          sendMail({ to: u.email, subject: emailData.subject, html: emailData.html }).catch(e => {
+            console.warn('[ANNOUNCEMENT MAIL WARN]', e.message)
+          })
+        }
+      }
     }
 
     res.status(201).json(announcement)

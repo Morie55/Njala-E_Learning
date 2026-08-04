@@ -1,13 +1,25 @@
+import { Resend } from 'resend'
 import nodemailer from 'nodemailer'
 
-const SMTP_HOST  = process.env.SMTP_HOST  || 'smtp.gmail.com'
-const SMTP_PORT  = parseInt(process.env.SMTP_PORT  || '465')
-const SMTP_USER  = process.env.SMTP_USER  || ''
-const SMTP_PASS  = process.env.SMTP_PASS  || ''
-const SMTP_FROM  = process.env.SMTP_FROM  || `"Njala E-Learning" <${SMTP_USER}>`
+const RESEND_API_KEY = process.env.RESEND_API_KEY || ''
+const RESEND_FROM = process.env.RESEND_FROM || process.env.EMAIL_FROM || 'Njala E-Learning <onboarding@resend.dev>'
+
+const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com'
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || '465')
+const SMTP_USER = process.env.SMTP_USER || ''
+const SMTP_PASS = process.env.SMTP_PASS || ''
+const SMTP_FROM = process.env.SMTP_FROM || `"Njala E-Learning" <${SMTP_USER}>`
+
+let resendClient = null
+function getResendClient() {
+  if (!RESEND_API_KEY) return null
+  if (!resendClient) {
+    resendClient = new Resend(RESEND_API_KEY)
+  }
+  return resendClient
+}
 
 let transporter = null
-
 function getTransporter() {
   if (!SMTP_USER || !SMTP_PASS) return null
   if (!transporter) {
@@ -22,21 +34,40 @@ function getTransporter() {
 }
 
 /**
- * Send an email. Silently skips if SMTP not configured.
+ * Send an email using Resend API (primary) or Nodemailer SMTP (fallback).
+ * Silently skips if neither is configured.
  * @param {{ to: string, subject: string, html: string, text?: string }} opts
  */
 export async function sendMail({ to, subject, html, text }) {
+  const resend = getResendClient()
+  if (resend) {
+    try {
+      const response = await resend.emails.send({
+        from: RESEND_FROM,
+        to,
+        subject,
+        html,
+        ...(text ? { text } : {}),
+      })
+      console.log('[mailer:resend] Sent:', subject, '→', to, 'ID:', response.data?.id)
+      return response
+    } catch (err) {
+      console.error('[mailer:resend] Failed:', err.message)
+    }
+  }
+
   const t = getTransporter()
-  if (!t) {
-    console.warn('[mailer] SMTP not configured — skipping email to', to)
-    return
+  if (t) {
+    try {
+      await t.sendMail({ from: SMTP_FROM, to, subject, html, text })
+      console.log('[mailer:smtp] Sent:', subject, '→', to)
+      return
+    } catch (err) {
+      console.error('[mailer:smtp] Failed:', err.message)
+    }
   }
-  try {
-    await t.sendMail({ from: SMTP_FROM, to, subject, html, text })
-    console.log('[mailer] Sent:', subject, '→', to)
-  } catch (err) {
-    console.error('[mailer] Failed:', err.message)
-  }
+
+  console.warn('[mailer] Neither RESEND_API_KEY nor SMTP configured — skipping email to', to)
 }
 
 /** Email templates */
@@ -59,7 +90,7 @@ export const templates = {
           <a href="${gradeLink}" style="display:inline-block;background:#03224d;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:bold;margin-top:8px">View My Grades →</a>
         </div>
         <div style="background:#f6f3f2;padding:16px 28px;font-size:11px;color:#747780;text-align:center">
-          Njala University E-Learning Platform · Njala, Sierra Leone · <a href="mailto:kmorie18c@njala.edu.sl">IT Support</a>
+          Njala University E-Learning Platform · Njala, Sierra Leone · <a href="mailto:support@njala.edu.sl">IT Support</a>
         </div>
       </div>`,
   }),
@@ -81,7 +112,7 @@ export const templates = {
           <a href="${submitLink}" style="display:inline-block;background:#086b53;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:bold;margin-top:8px">Submit Assignment →</a>
         </div>
         <div style="background:#f6f3f2;padding:16px 28px;font-size:11px;color:#747780;text-align:center">
-          Njala University E-Learning Platform · <a href="mailto:kmorie18c@njala.edu.sl">IT Support</a>
+          Njala University E-Learning Platform · <a href="mailto:support@njala.edu.sl">IT Support</a>
         </div>
       </div>`,
   }),
@@ -103,7 +134,7 @@ export const templates = {
           <a href="${link}" style="display:inline-block;background:#1a4fd8;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:bold">View Announcement →</a>
         </div>
         <div style="background:#f6f3f2;padding:16px 28px;font-size:11px;color:#747780;text-align:center">
-          Njala University E-Learning Platform · <a href="mailto:kmorie18c@njala.edu.sl">IT Support</a>
+          Njala University E-Learning Platform · <a href="mailto:support@njala.edu.sl">IT Support</a>
         </div>
       </div>`,
   }),
@@ -130,8 +161,30 @@ export const templates = {
           </div>
         </div>
         <div style="background:#f6f3f2;padding:16px 28px;font-size:11px;color:#747780;text-align:center">
-          Njala University · Finance Office · <a href="mailto:kmorie18c@njala.edu.sl">IT Support</a>
+          Njala University · Finance Office · <a href="mailto:support@njala.edu.sl">IT Support</a>
+        </div>
+      </div>`,
+  }),
+
+  broadcastAnnouncement: (userName, postedByName, announcementTitle, body, link) => ({
+    subject: `[University Announcement] ${announcementTitle || 'Important Update'}`,
+    html: `
+      <div style="font-family:Inter,Arial,sans-serif;max-width:600px;margin:auto;border:1px solid #e0e0e0;border-radius:12px;overflow:hidden">
+        <div style="background:#03224d;padding:24px 28px">
+          <h2 style="color:#fff;margin:0;font-size:18px">📢 University Broadcast Announcement</h2>
+        </div>
+        <div style="padding:28px">
+          <p style="color:#1b1c1c;font-size:15px">Dear <strong>${userName}</strong>,</p>
+          <p style="color:#44474f;font-size:14px">An official announcement has been broadcast by <strong>${postedByName}</strong>:</p>
+          <div style="border:1px solid #c4c6d0;border-left:4px solid #03224d;border-radius:8px;padding:16px 20px;margin:16px 0;background:#f6f3f2">
+            <p style="margin:0;color:#1b1c1c;font-size:15px;line-height:1.6;white-space:pre-wrap">${body}</p>
+          </div>
+          <a href="${link || 'https://nelms.njala.edu.sl/dashboard'}" style="display:inline-block;background:#03224d;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:bold">Open E-Learning Platform →</a>
+        </div>
+        <div style="background:#f6f3f2;padding:16px 28px;font-size:11px;color:#747780;text-align:center">
+          Njala University E-Learning Platform · <a href="mailto:support@njala.edu.sl">IT Support</a>
         </div>
       </div>`,
   }),
 }
+

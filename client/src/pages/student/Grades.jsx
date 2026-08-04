@@ -200,31 +200,65 @@ export default function Grades() {
         ) : filtered.length === 0 ? (
           <p className="text-center py-12 sm:py-16 text-[14px] text-[#44474f]">No submissions found.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[650px] text-left border-collapse">
-              <thead className="bg-[#eae8e7]">
-                <tr>
-                  {['Assignment', 'Course', 'Submitted', 'Score & Grade', 'Feedback'].map((h) => (
-                    <th key={h} className="px-4 sm:px-6 py-3 text-[12px] font-bold text-[#44474f] uppercase tracking-wider">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#c4c6d0]">
-                {filtered.map((s) => (
-                  <tr key={s._id} className="hover:bg-[#f6f3f2] transition-colors">
-                    <td className="px-4 sm:px-6 py-4 text-[14px] font-bold text-[#1b1c1c]">{s.assignmentTitle}</td>
-                    <td className="px-4 sm:px-6 py-4 text-[14px] text-[#44474f] font-medium">{s.courseCode}</td>
-                    <td className="px-4 sm:px-6 py-4 text-[13px] text-[#44474f]">{new Date(s.submittedAt).toLocaleDateString()}</td>
-                    <td className="px-4 sm:px-6 py-4">
-                      <ScoreChip score={s.score} maxScore={s.maxScore} />
-                    </td>
-                    <td className="px-4 sm:px-6 py-4 text-[13px] text-[#44474f] max-w-xs truncate">{s.feedback || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-8 p-4 sm:p-6">
+            {Object.entries(
+              filtered.reduce((acc, s) => {
+                const key = s.courseSemester || 'Semester 1'
+                ;(acc[key] ||= []).push(s)
+                return acc
+              }, {})
+            ).map(([semesterName, semSubmissions]) => {
+              const semGraded = semSubmissions.filter(s => s.score !== null && s.score !== undefined)
+              const semAvg = semGraded.length
+                ? (semGraded.reduce((sum, s) => sum + calculateGrade(s.score, s.maxScore).gradePoint, 0) / semGraded.length).toFixed(2)
+                : '0.00'
+
+              return (
+                <div key={semesterName} className="border border-[#c4c6d0] rounded-xl overflow-hidden shadow-xs bg-white">
+                  <div className="px-5 py-3.5 bg-[#f6f3f2] border-b border-[#c4c6d0] flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[#03224d]">calendar_month</span>
+                      <h3 className="font-bold text-[16px] text-[#03224d]">{semesterName}</h3>
+                      <span className="text-[12px] font-semibold text-[#44474f] bg-[#eae8e7] px-2.5 py-0.5 rounded-full">
+                        {semSubmissions.length} Course Task{semSubmissions.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    {semGraded.length > 0 && (
+                      <span className="text-[12px] font-bold text-[#086b53] bg-[#a0f3d4]/30 px-3 py-1 rounded-md border border-[#086b53]/30">
+                        Semester GPA: {semAvg} / 5.0
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[650px] text-left border-collapse">
+                      <thead className="bg-[#eae8e7]">
+                        <tr>
+                          {['Assignment', 'Course', 'Submitted', 'Score & Grade', 'Feedback'].map((h) => (
+                            <th key={h} className="px-4 sm:px-6 py-3 text-[12px] font-bold text-[#44474f] uppercase tracking-wider">
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#c4c6d0]">
+                        {semSubmissions.map((s) => (
+                          <tr key={s._id} className="hover:bg-[#f6f3f2] transition-colors">
+                            <td className="px-4 sm:px-6 py-4 text-[14px] font-bold text-[#1b1c1c]">{s.assignmentTitle}</td>
+                            <td className="px-4 sm:px-6 py-4 text-[14px] text-[#44474f] font-medium">{s.courseCode}</td>
+                            <td className="px-4 sm:px-6 py-4 text-[13px] text-[#44474f]">{new Date(s.submittedAt).toLocaleDateString()}</td>
+                            <td className="px-4 sm:px-6 py-4">
+                              <ScoreChip score={s.score} maxScore={s.maxScore} />
+                            </td>
+                            <td className="px-4 sm:px-6 py-4 text-[13px] text-[#44474f] max-w-xs truncate">{s.feedback || '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>

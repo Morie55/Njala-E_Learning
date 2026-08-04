@@ -44,7 +44,7 @@ export default function DeptHeadSettings() {
 
           <div>
             <label className="block text-[12px] font-bold text-[#44474f] uppercase tracking-wider mb-1">Official Email</label>
-            <input type="email" disabled value={user?.primaryEmailAddress?.emailAddress || 'keitaazlan@gmail.com'} className="w-full border border-[#c4c6d0] rounded-md px-3 py-2.5 text-[14px] bg-[#f6f3f2] text-[#747780] cursor-not-allowed" />
+            <input type="email" disabled value={user?.primaryEmailAddress?.emailAddress || 'depthead@njala.edu.sl'} className="w-full border border-[#c4c6d0] rounded-md px-3 py-2.5 text-[14px] bg-[#f6f3f2] text-[#747780] cursor-not-allowed" />
           </div>
 
           <div>

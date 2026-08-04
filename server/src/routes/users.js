@@ -7,6 +7,7 @@ import { authRateLimiter } from '../middleware/rateLimiter.js'
 import { validateBody } from '../middleware/validate.js'
 import { updateUserRoleSchema } from '../utils/schemas.js'
 import { logAudit } from '../utils/auditLogger.js'
+import { generateStudentId } from '../utils/generateStudentId.js'
 
 const router = Router()
 
@@ -57,6 +58,9 @@ router.post('/sync', authRateLimiter, requireAuth, async (req, res, next) => {
       if (fullName) user.fullName = fullName
       if (avatarUrl) user.avatarUrl = avatarUrl
       if (!user.role) user.role = clerkRole || 'student'
+      if (user.role === 'student' && user.departmentId && !user.idNumber) {
+        user.idNumber = await generateStudentId(user.departmentId)
+      }
       await user.save()
     }
     res.json(user)
@@ -231,15 +235,21 @@ router.patch('/:id/assignment', requireAuth, populateUser, async (req, res, next
   if (req.dbUser.role !== 'admin') return res.status(403).json({ error: 'Admin only' })
   try {
     const { schoolId, departmentId, idNumber } = req.body
+    const existingUser = await User.findById(req.params.id)
+    if (!existingUser) return res.status(404).json({ error: 'User not found' })
+
     const update = {}
     if (schoolId !== undefined) update.schoolId = (schoolId && schoolId.length === 24) ? schoolId : null
     if (departmentId !== undefined) update.departmentId = (departmentId && departmentId.length === 24) ? departmentId : null
-    if (idNumber !== undefined) update.idNumber = String(idNumber).trim()
+    if (idNumber !== undefined) {
+      update.idNumber = String(idNumber).trim()
+    } else if (existingUser.role === 'student' && !existingUser.idNumber && (departmentId || existingUser.departmentId)) {
+      update.idNumber = await generateStudentId(departmentId || existingUser.departmentId)
+    }
 
     const user = await User.findByIdAndUpdate(req.params.id, update, { returnDocument: 'after' })
       .populate('schoolId', 'name code')
       .populate('departmentId', 'name code')
-    if (!user) return res.status(404).json({ error: 'User not found' })
 
     res.json(user)
   } catch (err) { next(err) }

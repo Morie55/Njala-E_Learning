@@ -13,6 +13,7 @@ import Assignment from '../models/Assignment.js'
 import AuditLog from '../models/AuditLog.js'
 import Settings from '../models/Settings.js'
 import { logAudit } from '../utils/auditLogger.js'
+import { generateStudentId } from '../utils/generateStudentId.js'
 
 const router = Router()
 const auth = [requireAuth, populateUser, enforceStatus]
@@ -212,12 +213,17 @@ router.post('/users/bulk-import', ...auth, adminOnly, async (req, res, next) => 
           continue
         }
 
+        let assignedIdNumber = row.idNumber ? String(row.idNumber).trim() : ''
+        if (!assignedIdNumber && (role === 'student' || row.departmentId)) {
+          assignedIdNumber = await generateStudentId(row.departmentId || 'Technology')
+        }
+
         const payload = {
           clerkId: clerkUser.id,
           email,
           fullName,
           role,
-          idNumber: row.idNumber ? String(row.idNumber).trim() : '',
+          idNumber: assignedIdNumber,
           status: 'PENDING',
           mustChangePassword: true,
         }
@@ -225,7 +231,7 @@ router.post('/users/bulk-import', ...auth, adminOnly, async (req, res, next) => 
         if (row.departmentId && row.departmentId.length === 24) payload.departmentId = row.departmentId
 
         user = await User.create(payload)
-        results.push({ email, fullName, role, status: 'created', pin, userId: user._id })
+        results.push({ email, fullName, role, status: 'created', pin, userId: user._id, idNumber: assignedIdNumber })
       }
     } catch (err) {
       results.push({ email, status: 'failed', error: err.message || 'Import failed' })
@@ -239,7 +245,78 @@ router.post('/users/bulk-import', ...auth, adminOnly, async (req, res, next) => 
     details: `${results.filter(r => r.status === 'created').length} created, ${results.filter(r => r.status === 'updated').length} updated, ${results.filter(r => r.status === 'failed').length} failed`,
   })
 
-  res.status(201).json({ results })
+  res.json({ results })
+})
+
+/**
+ * POST /api/v1/admin/users/batch-generate
+ * Body: { departmentId, count = 10, role = 'student' }
+ * Provision N accounts automatically for a program/department
+ */
+router.post('/users/batch-generate', ...auth, adminOnly, async (req, res, next) => {
+  const { departmentId, count = 10, role = 'student' } = req.body
+  const parsedCount = parseInt(count, 10)
+  if (!departmentId || isNaN(parsedCount) || parsedCount < 1 || parsedCount > 100) {
+    return res.status(400).json({ error: 'departmentId and a count between 1 and 100 are required' })
+  }
+
+  const department = await Department.findById(departmentId)
+  if (!department) return res.status(404).json({ error: 'Department not found' })
+
+  const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
+  const results = []
+
+  for (let i = 0; i < parsedCount; i++) {
+    const idNumber = await generateStudentId(department.name)
+    const pin = generatePin()
+    const cleanId = idNumber.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
+    const email = `${cleanId}@njala.edu.sl`
+    const fullName = `${role === 'student' ? 'Student' : 'User'} ${idNumber}`
+
+    try {
+      let clerkUser
+      try {
+        clerkUser = await clerk.users.createUser({
+          emailAddress: [email],
+          username: cleanId + '_' + Math.floor(1000 + Math.random() * 9000),
+          password: pin,
+          skipPasswordChecks: true,
+          firstName: role === 'student' ? 'Student' : 'User',
+          lastName: idNumber,
+          publicMetadata: { role },
+        })
+      } catch (clerkErr) {
+        const errMsg = clerkErr.errors?.[0]?.longMessage || clerkErr.errors?.[0]?.message || clerkErr.message || 'Clerk user creation failed'
+        results.push({ idNumber, email, status: 'failed', error: errMsg })
+        continue
+      }
+
+      const user = await User.create({
+        clerkId: clerkUser.id,
+        email,
+        fullName,
+        role,
+        schoolId: department.schoolId,
+        departmentId: department._id,
+        idNumber,
+        status: 'PENDING',
+        mustChangePassword: true,
+      })
+
+      results.push({ idNumber, email, pin, fullName, role, status: 'created', userId: user._id })
+    } catch (err) {
+      results.push({ idNumber, email, status: 'failed', error: err.message || 'Creation failed' })
+    }
+  }
+
+  await logAudit({
+    req,
+    action: 'BATCH_GENERATE',
+    targetModel: 'User',
+    details: `Generated ${results.filter(r => r.status === 'created').length} ${role} accounts for ${department.name}`,
+  })
+
+  res.status(201).json({ results, departmentName: department.name })
 })
 
 

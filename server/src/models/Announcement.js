@@ -7,6 +7,7 @@ const announcementSchema = new mongoose.Schema(
     departmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Department', default: null }, // for dept-wide announcements
     postedBy:     { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     message:      { type: String, required: true, minlength: 10 },
+    targetRole:   { type: String, enum: ['all', 'student', 'lecturer', 'dept_head'], default: 'all' },
     postedAt:     { type: Date, default: Date.now },
   },
   { timestamps: true }
