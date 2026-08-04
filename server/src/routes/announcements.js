@@ -119,20 +119,31 @@ router.post('/', ...auth, validateBody(createAnnouncementSchema), async (req, re
       }))
       if (notifs.length > 0) await Notification.insertMany(notifs)
 
-      // Send broadcast email to all targeted email addresses
-      for (const u of targetUsers) {
-        if (u.email && u.email.includes('@')) {
-          const emailData = templates.broadcastAnnouncement(
-            u.fullName || 'User',
-            fullName || 'Platform Administrator',
-            title,
-            message,
-            'https://nelms.njala.edu.sl/dashboard'
-          )
-          sendMail({ to: u.email, subject: emailData.subject, html: emailData.html }).catch(e => {
-            console.warn('[ANNOUNCEMENT MAIL WARN]', e.message)
-          })
-        }
+      // Send broadcast email to all targeted email addresses in background batches
+      const eligibleUsers = targetUsers.filter(u => u.email && u.email.includes('@'))
+      if (eligibleUsers.length > 0) {
+        ;(async () => {
+          const BATCH_SIZE = 5
+          const DELAY_MS = 200
+          for (let i = 0; i < eligibleUsers.length; i += BATCH_SIZE) {
+            const chunk = eligibleUsers.slice(i, i + BATCH_SIZE)
+            await Promise.allSettled(
+              chunk.map(u => {
+                const emailData = templates.broadcastAnnouncement(
+                  u.fullName || 'User',
+                  fullName || 'Platform Administrator',
+                  title,
+                  message,
+                  'https://nelms.njala.edu.sl/dashboard'
+                )
+                return sendMail({ to: u.email, subject: emailData.subject, html: emailData.html })
+              })
+            )
+            if (i + BATCH_SIZE < eligibleUsers.length) {
+              await new Promise(r => setTimeout(r, DELAY_MS))
+            }
+          }
+        })().catch(e => console.warn('[ANNOUNCEMENT MAIL BATCH WARN]', e.message))
       }
     }
 

@@ -9,6 +9,13 @@ const DEFAULT_SCHOOLS = [
   { name: 'School of Education', code: 'EDU' },
   { name: 'School of Environmental Sciences', code: 'ENV' },
   { name: 'School of Social Sciences', code: 'SOC' },
+  { name: 'School of Basic Sciences', code: 'SBS' },
+  { name: 'School of Basic Education', code: 'SBE' },
+  { name: 'School of Community Health Sciences', code: 'CHS' },
+  { name: 'School of Natural Resources Management', code: 'NRM' },
+  { name: 'School of Nursing and Midwifery', code: 'SNM' },
+  { name: 'School of Veterinary Medicine', code: 'VET' },
+  { name: 'School of Postgraduate Studies', code: 'PGS' },
 ]
 
 const BY_SCHOOL_CODE = {
@@ -20,28 +27,6 @@ const BY_SCHOOL_CODE = {
     { name: 'Civil Engineering', code: 'CVE' },
     { name: 'Mechanical Engineering', code: 'MEE' },
     { name: 'Electrical & Electronic Engineering', code: 'EEE' },
-  ],
-  AFS: [
-    { name: 'Crop Science', code: 'CRS' },
-    { name: 'Soil Science', code: 'SOS' },
-    { name: 'Animal Science', code: 'ANS' },
-    { name: 'Agricultural Economics', code: 'AEC' },
-    { name: 'Agricultural Extension', code: 'AEX' },
-  ],
-  EDU: [
-    { name: 'Curriculum Studies', code: 'CUS' },
-    { name: 'Educational Administration', code: 'EDA' },
-    { name: 'Science Education', code: 'SCE' },
-    { name: 'Arts Education', code: 'ARE' },
-    { name: 'Guidance & Counselling', code: 'GDC' },
-  ],
-  ENV: [
-    { name: 'Environmental Management', code: 'EVM' },
-    { name: 'Forestry & Wood Science', code: 'FWS' },
-  ],
-  SOC: [
-    { name: 'Sociology & Social Work', code: 'SSW' },
-    { name: 'Economics & Development', code: 'ECD' },
   ],
 }
 
