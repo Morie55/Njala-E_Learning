@@ -3,6 +3,7 @@ import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import mongoose from 'mongoose'
+import path from 'path'
 
 // Route imports
 import authRoutes from './routes/auth.js'
@@ -61,6 +62,7 @@ app.use(
 )
 app.use(express.json({ limit: '5mb' }))
 app.use(express.urlencoded({ extended: true }))
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')))
 
 // Global rate limiting — applies to all API routes
 app.use('/api/v1', globalRateLimiter)
