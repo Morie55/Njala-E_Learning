@@ -25,6 +25,11 @@ const userSchema = new mongoose.Schema(
       index: true,
     },
     roleSelected: { type: Boolean, default: false },
+    requestedRole: {
+      type: String,
+      enum: ['student', 'lecturer', 'dept_head', 'admin'],
+      default: 'student',
+    },
     approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     approvedAt: { type: Date, default: null },
     rejectedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },

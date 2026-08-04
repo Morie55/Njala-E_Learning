@@ -58,7 +58,7 @@ export default function UserManagement() {
 
   function openApproveModal(user) {
     setSelected(user)
-    setNewRole(user.role || 'student')
+    setNewRole(user.requestedRole || user.role || 'student')
     setModal('approve')
     setRoleError('')
   }
@@ -636,7 +636,7 @@ export default function UserManagement() {
                 <p className="text-[12px] text-[#44474f]">{selected.email}</p>
               </div>
               <span className="text-[11px] font-bold px-2.5 py-1 rounded bg-[#dd9235]/20 text-[#543100] border border-[#dd9235]/40">
-                Requested: {selected.role?.replace('_', ' ').toUpperCase()}
+                Requested: {(selected.requestedRole || selected.role)?.replace('_', ' ').toUpperCase()}
               </span>
             </div>
 

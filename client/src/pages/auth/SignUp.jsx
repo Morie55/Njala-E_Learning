@@ -1,7 +1,16 @@
+import { useState } from 'react'
 import { SignUp as ClerkSignUp } from '@clerk/clerk-react'
 import njalaLogo from '../../assets/Njala University.jpg'
 
 export default function SignUp() {
+  const [requestedRole, setRequestedRole] = useState('student')
+
+  const ALLOWED_ROLES = [
+    { id: 'student', label: 'Student', desc: 'Access enrolled courses & submit assignments' },
+    { id: 'lecturer', label: 'Lecturer', desc: 'Manage course content & grade submissions' },
+    { id: 'dept_head', label: 'Department Head', desc: 'Departmental oversight & academic reports' },
+  ]
+
   return (
     <main className="min-h-screen flex flex-col md:flex-row bg-[#fbf9f8] text-[#1b1c1c]">
       {/* Mobile Top Header Banner (Sleek, Compact Header for Mobile Viewports) */}
@@ -80,8 +89,38 @@ export default function SignUp() {
             <p className="text-xs sm:text-sm text-[#44474f] mt-1">Use your official university email address to register.</p>
           </div>
 
+          {/* Intended System Role Selector */}
+          <div className="mb-5 bg-white border border-[#c4c6d0] rounded-xl p-3.5 shadow-xs">
+            <label className="block text-xs font-bold text-[#03224d] uppercase tracking-wider mb-2">
+              Select Intended System Role <span className="text-[#ba1a1a]">*</span>
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {ALLOWED_ROLES.map((r) => {
+                const active = requestedRole === r.id
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setRequestedRole(r.id)}
+                    className={`py-2 px-2 rounded-lg text-xs font-semibold border transition-all text-center cursor-pointer ${
+                      active
+                        ? 'border-[#03224d] bg-[#03224d] text-white shadow-xs'
+                        : 'border-[#c4c6d0] bg-[#f6f3f2] text-[#44474f] hover:border-[#03224d]/40'
+                    }`}
+                  >
+                    {r.label}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-[11px] text-[#44474f] mt-2 italic">
+              Your requested role will be reviewed by an administrator before full access is granted.
+            </p>
+          </div>
+
           {/* Form */}
           <ClerkSignUp
+            unsafeMetadata={{ requestedRole }}
             appearance={{
               elements: {
                 rootBox: 'w-full',
@@ -99,8 +138,8 @@ export default function SignUp() {
                 identityPreviewText: 'text-[#1b1c1c] font-medium text-xs sm:text-sm',
               },
             }}
-            fallbackRedirectUrl="/select-role"
-            forceRedirectUrl="/select-role"
+            fallbackRedirectUrl="/awaiting-approval"
+            forceRedirectUrl="/awaiting-approval"
           />
 
           {/* Help Footer */}

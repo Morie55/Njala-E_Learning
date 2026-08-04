@@ -24,6 +24,10 @@ router.post('/sync', authRateLimiter, requireAuth, async (req, res, next) => {
     const avatarUrl = clerkUser.imageUrl ?? ''
     const clerkRole = clerkUser.publicMetadata?.role
 
+    const rawRequestedRole = req.body.requestedRole || clerkUser.unsafeMetadata?.requestedRole
+    const allowedRequestedRoles = ['student', 'lecturer', 'dept_head']
+    const sanitizedRequestedRole = allowedRequestedRoles.includes(rawRequestedRole) ? rawRequestedRole : 'student'
+
     let user = await User.findOne({ clerkId: req.auth.userId })
     if (!user && email) {
       user = await User.findOne({ email: email.toLowerCase() })
@@ -32,14 +36,14 @@ router.post('/sync', authRateLimiter, requireAuth, async (req, res, next) => {
     if (!user) {
       const userCount = await User.countDocuments()
       const isFirstUser = userCount === 0
-      const initialRole = clerkRole || (isFirstUser ? 'admin' : 'student')
       user = await User.create({
         clerkId: req.auth.userId,
         email: email || `${req.auth.userId}@njala.edu.sl`,
         fullName: fullName || 'User',
         avatarUrl,
-        role: initialRole,
-        roleSelected: clerkRole ? true : isFirstUser,
+        role: isFirstUser ? 'admin' : 'student',
+        requestedRole: isFirstUser ? 'admin' : sanitizedRequestedRole,
+        roleSelected: true,
         status: isFirstUser ? 'ACTIVE' : 'PENDING',
       })
     } else {
@@ -197,10 +201,13 @@ router.patch('/:id/approve', requireAuth, populateUser, async (req, res, next) =
     const user = await User.findById(req.params.id)
     if (!user) return res.status(404).json({ error: 'User not found' })
 
-    if (role && ['student', 'lecturer', 'dept_head', 'admin'].includes(role)) {
-      user.role = role
-    }
-    user.status = 'APPROVED'
+    const assignedRole = (role && ['student', 'lecturer', 'dept_head', 'admin'].includes(role))
+      ? role
+      : (user.requestedRole || user.role || 'student')
+
+    user.role = assignedRole
+    user.status = 'ACTIVE'
+    user.activatedAt = new Date()
     user.approvedBy = req.dbUser._id
     user.approvedAt = new Date()
     await user.save()
@@ -218,7 +225,7 @@ router.patch('/:id/approve', requireAuth, populateUser, async (req, res, next) =
 
     await logAudit({
       req,
-      action: 'USER_APPROVED',
+      action: 'ACCOUNT_APPROVED',
       targetModel: 'User',
       targetId: user._id.toString(),
       details: { assignedRole: user.role, email: user.email, approvedBy: req.dbUser.email },
@@ -301,8 +308,13 @@ router.patch('/:id/status', requireAuth, populateUser, async (req, res, next) =>
     return res.status(400).json({ error: 'Invalid status' })
   }
   try {
-    const update = { status: upperStatus }
+    const existingUser = await User.findById(req.params.id)
+    if (!existingUser) return res.status(404).json({ error: 'User not found' })
+
+    const update = { status: upperStatus === 'APPROVED' ? 'ACTIVE' : upperStatus }
     if (upperStatus === 'APPROVED' || upperStatus === 'ACTIVE') {
+      update.role = existingUser.requestedRole || existingUser.role || 'student'
+      update.activatedAt = new Date()
       update.approvedBy = req.dbUser._id
       update.approvedAt = new Date()
       update.suspendedAt = null
@@ -325,14 +337,24 @@ router.patch('/:id/status', requireAuth, populateUser, async (req, res, next) =>
     }
 
     const user = await User.findByIdAndUpdate(req.params.id, update, { returnDocument: 'after' })
-    if (!user) return res.status(404).json({ error: 'User not found' })
+
+    if ((upperStatus === 'APPROVED' || upperStatus === 'ACTIVE') && user.clerkId && process.env.CLERK_SECRET_KEY) {
+      try {
+        const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
+        await clerk.users.updateUser(user.clerkId, {
+          publicMetadata: { role: user.role },
+        })
+      } catch (clerkErr) {
+        console.warn('[CLERK ROLE SYNC WARN]', clerkErr.message)
+      }
+    }
 
     await logAudit({
       req,
-      action: 'STATUS_CHANGE',
+      action: (upperStatus === 'APPROVED' || upperStatus === 'ACTIVE') ? 'ACCOUNT_APPROVED' : 'STATUS_CHANGE',
       targetModel: 'User',
       targetId: user._id.toString(),
-      details: { newStatus: upperStatus, reason: reason || '' },
+      details: { newStatus: user.status, assignedRole: user.role, reason: reason || '' },
     })
 
     res.json(user)
