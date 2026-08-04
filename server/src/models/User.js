@@ -14,16 +14,22 @@ const userSchema = new mongoose.Schema(
     // User Lifecycle Model (Supports legacy lowercase values for seamless backward compatibility)
     status: {
       type: String,
-      enum: ['PENDING', 'ACTIVE', 'SUSPENDED', 'ALUMNI', 'ARCHIVED', 'active', 'suspended', 'graduated', 'pending', 'alumni', 'archived'],
-      default: 'ACTIVE',
+      enum: ['PENDING', 'APPROVED', 'REJECTED', 'ACTIVE', 'SUSPENDED', 'ALUMNI', 'ARCHIVED', 'active', 'suspended', 'graduated', 'pending', 'approved', 'rejected', 'alumni', 'archived'],
+      default: 'PENDING',
       set: (val) => {
-        if (!val) return 'ACTIVE'
+        if (!val) return 'PENDING'
         const upper = String(val).toUpperCase()
         if (upper === 'GRADUATED') return 'ALUMNI'
         return upper
       },
       index: true,
     },
+    roleSelected: { type: Boolean, default: false },
+    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    approvedAt: { type: Date, default: null },
+    rejectedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    rejectedAt: { type: Date, default: null },
+    rejectionReason: { type: String, default: '' },
     mustChangePassword: { type: Boolean, default: false },
     activatedAt: { type: Date, default: null },
     suspendedAt: { type: Date, default: null },

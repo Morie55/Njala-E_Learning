@@ -19,19 +19,42 @@ export function enforceStatus(req, res, next) {
     return res.status(403).json({ error: 'This account is archived. Contact the registrar.' })
   }
 
-  // 3. Pending accounts requiring first login password change
+  // 3. Rejected accounts: allow /users/me to check status, block all other endpoints
+  if (status === 'REJECTED' && !fullPath.includes('/users/me')) {
+    return res.status(403).json({
+      error: 'ACCOUNT_REJECTED',
+      message: 'Your account request has been rejected.',
+      reason: req.dbUser.rejectionReason || '',
+    })
+  }
+
+  // 4. Pending accounts requiring first login password change
   if (status === 'PENDING' && mustChangePassword && !fullPath.includes('/me/activate')) {
     return res.status(428).json({ error: 'PASSWORD_CHANGE_REQUIRED' })
   }
 
-  // 4. Suspended accounts: read-only access (GET/HEAD permitted, write operations blocked)
+  // 5. Pending accounts awaiting administrator approval or role selection
+  const isPendingAllowedPath =
+    fullPath.includes('/users/me') ||
+    fullPath.includes('/users/me/select-role') ||
+    fullPath.includes('/me/activate') ||
+    fullPath.includes('/users/sync')
+
+  if (status === 'PENDING' && !isPendingAllowedPath) {
+    return res.status(403).json({
+      error: 'ACCOUNT_PENDING_APPROVAL',
+      message: 'Your account is awaiting administrator approval.',
+    })
+  }
+
+  // 6. Suspended accounts: read-only access (GET/HEAD permitted, write operations blocked)
   if (status === 'SUSPENDED' && !['GET', 'HEAD'].includes(req.method)) {
     return res.status(403).json({
       error: 'Your account is suspended. You can view content but not submit or edit.',
     })
   }
 
-  // 5. Alumni access rule: Course material & assignment access expires 1 year post-graduation
+  // 7. Alumni access rule: Course material & assignment access expires 1 year post-graduation
   if (
     status === 'ALUMNI' &&
     alumniSince &&

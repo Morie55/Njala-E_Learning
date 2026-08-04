@@ -14,6 +14,17 @@ export function UserProvider({ children }) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [error, setError] = useState(null)
 
+  async function refetchUser() {
+    try {
+      const { data } = await api.get('/users/me')
+      setDbUser(data)
+      return data
+    } catch (err) {
+      setError(err.message)
+      throw err
+    }
+  }
+
   useEffect(() => {
     if (!clerkLoaded) return
     if (!isSignedIn) {
@@ -39,11 +50,21 @@ export function UserProvider({ children }) {
     return () => { cancelled = true }
   }, [clerkLoaded, isSignedIn, clerkUser?.id])
 
+  const userStatus = dbUser?.status ? String(dbUser.status).toUpperCase() : null
+  const isApproved = userStatus === 'APPROVED' || userStatus === 'ACTIVE'
+  const isPending = userStatus === 'PENDING'
+  const isRejected = userStatus === 'REJECTED'
+
   const value = {
     clerkUser,
     dbUser,
     setDbUser,
+    refetchUser,
     role: dbUser?.role ?? null,
+    status: userStatus,
+    isApproved,
+    isPending,
+    isRejected,
     isLoaded,
     loading: !isLoaded,
     isSignedIn,

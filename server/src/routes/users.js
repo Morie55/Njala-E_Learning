@@ -31,14 +31,16 @@ router.post('/sync', authRateLimiter, requireAuth, async (req, res, next) => {
 
     if (!user) {
       const userCount = await User.countDocuments()
-      const initialRole = clerkRole || (userCount === 0 ? 'admin' : 'student')
+      const isFirstUser = userCount === 0
+      const initialRole = clerkRole || (isFirstUser ? 'admin' : 'student')
       user = await User.create({
         clerkId: req.auth.userId,
         email: email || `${req.auth.userId}@njala.edu.sl`,
         fullName: fullName || 'User',
         avatarUrl,
         role: initialRole,
-        status: 'ACTIVE',
+        roleSelected: clerkRole ? true : isFirstUser,
+        status: isFirstUser ? 'ACTIVE' : 'PENDING',
       })
     } else {
       if (user.clerkId !== req.auth.userId) {
@@ -104,6 +106,38 @@ router.post('/me/activate', authRateLimiter, requireAuth, populateUser, async (r
 })
 
 /**
+ * PATCH /api/v1/users/me/select-role
+ * Allows a newly registered user to select their desired system role.
+ */
+router.patch('/me/select-role', requireAuth, populateUser, async (req, res, next) => {
+  try {
+    const { role } = req.body
+    const allowedRoles = ['student', 'lecturer', 'dept_head', 'admin']
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({ error: 'Invalid system role selected.' })
+    }
+
+    const user = await User.findById(req.dbUser._id)
+    if (!user) return res.status(404).json({ error: 'User not found' })
+
+    user.role = role
+    user.roleSelected = true
+    user.status = 'PENDING'
+    await user.save()
+
+    await logAudit({
+      req,
+      action: 'ROLE_SELECTED',
+      targetModel: 'User',
+      targetId: user._id.toString(),
+      details: { selectedRole: role, email: user.email },
+    })
+
+    res.json(user)
+  } catch (err) { next(err) }
+})
+
+/**
  * PATCH /api/v1/users/me/role
  * Allows updating current user's role (useful for dev/testing only)
  */
@@ -128,7 +162,7 @@ router.get('/me', requireAuth, populateUser, (req, res) => {
  * GET /api/v1/users  [Admin only] — Filter active/non-deleted users
  */
 router.get('/', requireAuth, populateUser, async (req, res, next) => {
-  if (!['admin', 'dept_head'].includes(req.dbUser.role)) return res.status(403).json({ error: 'Forbidden' })
+  if (!['admin', 'dept_head'].includes(req.dbUser.role)) return res.status(403).json({ error: 'Admin only' })
   try {
     const page = parseInt(req.query.page) || 1
     const limit = parseInt(req.query.limit) || 100
@@ -138,7 +172,7 @@ router.get('/', requireAuth, populateUser, async (req, res, next) => {
       filter.role = req.query.role
     }
 
-    if (req.query.status && ['PENDING', 'ACTIVE', 'SUSPENDED', 'ALUMNI', 'ARCHIVED'].includes(req.query.status.toUpperCase())) {
+    if (req.query.status && ['PENDING', 'APPROVED', 'REJECTED', 'ACTIVE', 'SUSPENDED', 'ALUMNI', 'ARCHIVED'].includes(req.query.status.toUpperCase())) {
       filter.status = req.query.status.toUpperCase()
     }
 
@@ -150,6 +184,75 @@ router.get('/', requireAuth, populateUser, async (req, res, next) => {
       .limit(limit)
       .lean()
     res.json({ users })
+  } catch (err) { next(err) }
+})
+
+/**
+ * PATCH /api/v1/users/:id/approve  [Admin only] — Approve pending account
+ */
+router.patch('/:id/approve', requireAuth, populateUser, async (req, res, next) => {
+  if (req.dbUser.role !== 'admin') return res.status(403).json({ error: 'Admin only' })
+  try {
+    const { role } = req.body
+    const user = await User.findById(req.params.id)
+    if (!user) return res.status(404).json({ error: 'User not found' })
+
+    if (role && ['student', 'lecturer', 'dept_head', 'admin'].includes(role)) {
+      user.role = role
+    }
+    user.status = 'APPROVED'
+    user.approvedBy = req.dbUser._id
+    user.approvedAt = new Date()
+    await user.save()
+
+    if (user.clerkId && process.env.CLERK_SECRET_KEY) {
+      try {
+        const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
+        await clerk.users.updateUser(user.clerkId, {
+          publicMetadata: { role: user.role },
+        })
+      } catch (clerkErr) {
+        console.warn('[CLERK ROLE SYNC WARN]', clerkErr.message)
+      }
+    }
+
+    await logAudit({
+      req,
+      action: 'USER_APPROVED',
+      targetModel: 'User',
+      targetId: user._id.toString(),
+      details: { assignedRole: user.role, email: user.email, approvedBy: req.dbUser.email },
+    })
+
+    res.json(user)
+  } catch (err) { next(err) }
+})
+
+/**
+ * PATCH /api/v1/users/:id/reject  [Admin only] — Reject pending account request
+ */
+router.patch('/:id/reject', requireAuth, populateUser, async (req, res, next) => {
+  if (req.dbUser.role !== 'admin') return res.status(403).json({ error: 'Admin only' })
+  try {
+    const { reason } = req.body
+    const user = await User.findById(req.params.id)
+    if (!user) return res.status(404).json({ error: 'User not found' })
+
+    user.status = 'REJECTED'
+    user.rejectedBy = req.dbUser._id
+    user.rejectedAt = new Date()
+    user.rejectionReason = reason || ''
+    await user.save()
+
+    await logAudit({
+      req,
+      action: 'USER_REJECTED',
+      targetModel: 'User',
+      targetId: user._id.toString(),
+      details: { reason: reason || '', email: user.email, rejectedBy: req.dbUser.email },
+    })
+
+    res.json(user)
   } catch (err) { next(err) }
 })
 
@@ -193,23 +296,31 @@ router.patch('/:id/role', requireAuth, populateUser, validateBody(updateUserRole
 router.patch('/:id/status', requireAuth, populateUser, async (req, res, next) => {
   if (req.dbUser.role !== 'admin') return res.status(403).json({ error: 'Admin only' })
   const { status, reason } = req.body
-  if (!['PENDING', 'ACTIVE', 'SUSPENDED', 'ALUMNI', 'ARCHIVED'].includes(status)) {
+  const upperStatus = status ? String(status).toUpperCase() : ''
+  if (!['PENDING', 'APPROVED', 'REJECTED', 'ACTIVE', 'SUSPENDED', 'ALUMNI', 'ARCHIVED'].includes(upperStatus)) {
     return res.status(400).json({ error: 'Invalid status' })
   }
   try {
-    const update = { status }
-    if (status === 'SUSPENDED') {
-      update.suspendedAt = new Date()
-      update.suspensionReason = reason || ''
-    }
-    if (status === 'ACTIVE') {
+    const update = { status: upperStatus }
+    if (upperStatus === 'APPROVED' || upperStatus === 'ACTIVE') {
+      update.approvedBy = req.dbUser._id
+      update.approvedAt = new Date()
       update.suspendedAt = null
       update.suspensionReason = ''
     }
-    if (status === 'ALUMNI') {
+    if (upperStatus === 'REJECTED') {
+      update.rejectedBy = req.dbUser._id
+      update.rejectedAt = new Date()
+      update.rejectionReason = reason || ''
+    }
+    if (upperStatus === 'SUSPENDED') {
+      update.suspendedAt = new Date()
+      update.suspensionReason = reason || ''
+    }
+    if (upperStatus === 'ALUMNI') {
       update.alumniSince = new Date()
     }
-    if (status === 'ARCHIVED') {
+    if (upperStatus === 'ARCHIVED') {
       update.archivedAt = new Date()
     }
 
@@ -221,7 +332,7 @@ router.patch('/:id/status', requireAuth, populateUser, async (req, res, next) =>
       action: 'STATUS_CHANGE',
       targetModel: 'User',
       targetId: user._id.toString(),
-      details: { newStatus: status, reason: reason || '' },
+      details: { newStatus: upperStatus, reason: reason || '' },
     })
 
     res.json(user)

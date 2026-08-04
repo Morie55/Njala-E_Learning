@@ -30,6 +30,9 @@ const LandingPage = lazy(() => import('./pages/LandingPage'))
 const SignIn = lazy(() => import('./pages/auth/SignIn'))
 const SignUp = lazy(() => import('./pages/auth/SignUp'))
 const ActivateAccount = lazy(() => import('./pages/auth/ActivateAccount'))
+const SelectRole = lazy(() => import('./pages/auth/SelectRole'))
+const PendingApproval = lazy(() => import('./pages/auth/PendingApproval'))
+const AccountRejected = lazy(() => import('./pages/auth/AccountRejected'))
 
 // Student
 const StudentDashboard = lazy(() => import('./pages/student/Dashboard'))
@@ -90,6 +93,52 @@ function RequireAuth({ children }) {
   const { isSignedIn, isLoaded } = useAuth()
   if (!isLoaded) return <LayoutLoader />
   if (!isSignedIn) return <Navigate to="/sign-in" replace />
+  return children
+}
+
+/** Route Guard for Role Selection page */
+function SelectRoleGuard() {
+  const { dbUser, status, isLoaded } = useUser()
+  if (!isLoaded) return <PageLoader />
+  if (!dbUser) return <Navigate to="/sign-in" replace />
+  if (status === 'APPROVED' || status === 'ACTIVE') return <Navigate to="/dashboard" replace />
+  if (status === 'REJECTED') return <Navigate to="/account-rejected" replace />
+  if (status === 'PENDING' && dbUser.roleSelected) return <Navigate to="/pending-approval" replace />
+  return <SelectRole />
+}
+
+/** Route Guard for Pending Approval page */
+function PendingApprovalGuard() {
+  const { dbUser, status, isLoaded } = useUser()
+  if (!isLoaded) return <PageLoader />
+  if (!dbUser) return <Navigate to="/sign-in" replace />
+  if (status === 'APPROVED' || status === 'ACTIVE') return <Navigate to="/dashboard" replace />
+  if (status === 'REJECTED') return <Navigate to="/account-rejected" replace />
+  if (status === 'PENDING' && !dbUser.roleSelected) return <Navigate to="/select-role" replace />
+  return <PendingApproval />
+}
+
+/** Ensures user account is approved before granting access to system routes */
+function RequireApproved({ children }) {
+  const { dbUser, status, isLoaded } = useUser()
+  if (!isLoaded) return <LayoutLoader />
+  if (!dbUser) return <Navigate to="/sign-in" replace />
+
+  if (dbUser?.status === 'pending_activation' || (status === 'PENDING' && dbUser?.mustChangePassword)) {
+    return <Navigate to="/activate" replace />
+  }
+
+  if (status === 'REJECTED') {
+    return <Navigate to="/account-rejected" replace />
+  }
+
+  if (status === 'PENDING') {
+    if (!dbUser.roleSelected) {
+      return <Navigate to="/select-role" replace />
+    }
+    return <Navigate to="/pending-approval" replace />
+  }
+
   return children
 }
 
@@ -180,14 +229,28 @@ const router = createBrowserRouter([
     path: '/activate',
     element: <RequireAuth><Suspense fallback={<PageLoader />}><ActivateAccount /></Suspense></RequireAuth>,
   },
+  {
+    path: '/select-role',
+    element: <RequireAuth><Suspense fallback={<PageLoader />}><SelectRoleGuard /></Suspense></RequireAuth>,
+  },
+  {
+    path: '/pending-approval',
+    element: <RequireAuth><Suspense fallback={<PageLoader />}><PendingApprovalGuard /></Suspense></RequireAuth>,
+  },
+  {
+    path: '/account-rejected',
+    element: <RequireAuth><Suspense fallback={<PageLoader />}><AccountRejected /></Suspense></RequireAuth>,
+  },
 
   {
     path: '/*',
     element: (
       <RequireAuth>
-        <Suspense fallback={<LayoutLoader />}>
-          <Outlet />
-        </Suspense>
+        <RequireApproved>
+          <Suspense fallback={<LayoutLoader />}>
+            <Outlet />
+          </Suspense>
+        </RequireApproved>
       </RequireAuth>
     ),
     errorElement: <RootErrorBoundary />,

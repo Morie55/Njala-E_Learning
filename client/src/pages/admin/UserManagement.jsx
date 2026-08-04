@@ -7,23 +7,24 @@ import LoadingSkeleton from '../../components/ui/LoadingSkeleton'
 import api from '../../lib/api'
 
 const ROLES = ['student', 'lecturer', 'dept_head', 'admin']
-const LIFECYCLE_STATUSES = ['PENDING', 'ACTIVE', 'SUSPENDED', 'ALUMNI', 'ARCHIVED']
+const LIFECYCLE_STATUSES = ['PENDING', 'APPROVED', 'ACTIVE', 'REJECTED', 'SUSPENDED', 'ALUMNI', 'ARCHIVED']
 
 export default function UserManagement() {
   const [users, setUsers] = useState([])
   const [schools, setSchools] = useState([])
   const [departments, setDepartments] = useState([])
   const [loading, setLoading] = useState(true)
-  const [modal, setModal] = useState(null) // 'edit' | 'suspend' | 'delete'
+  const [modal, setModal] = useState(null) // 'edit' | 'suspend' | 'delete' | 'approve' | 'reject'
   const [selected, setSelected] = useState(null)
 
-  // Edit Modal State
+  // Edit / Approve / Reject Modal State
   const [newRole, setNewRole] = useState('')
   const [newIdNumber, setNewIdNumber] = useState('')
   const [newStatus, setNewStatus] = useState('ACTIVE')
   const [assignedSchool, setAssignedSchool] = useState('')
   const [assignedDept, setAssignedDept] = useState('')
   const [suspensionReason, setSuspensionReason] = useState('')
+  const [rejectionReason, setRejectionReason] = useState('')
   const [hardDelete, setHardDelete] = useState(false)
   const [deleteReason, setDeleteReason] = useState('')
   const [saving, setSaving] = useState(false)
@@ -55,6 +56,20 @@ export default function UserManagement() {
     }
   }, [assignedSchool])
 
+  function openApproveModal(user) {
+    setSelected(user)
+    setNewRole(user.role || 'student')
+    setModal('approve')
+    setRoleError('')
+  }
+
+  function openRejectModal(user) {
+    setSelected(user)
+    setRejectionReason('')
+    setModal('reject')
+    setRoleError('')
+  }
+
   function openEditModal(user) {
     setSelected(user)
     setNewRole(user.role)
@@ -65,7 +80,6 @@ export default function UserManagement() {
     setAssignedDept(user.departmentId?._id || user.departmentId || '')
     setModal('edit')
     setRoleError('')
-    // Pre-fetch departments immediately if the user already has a school assigned
     if (schoolId) {
       api.get(`/departments?schoolId=${schoolId}`)
         .then((r) => setDepartments(r.data?.departments ?? []))
@@ -86,6 +100,34 @@ export default function UserManagement() {
     setHardDelete(false)
     setDeleteReason('')
     setModal('delete')
+  }
+
+  async function handleApproveUser() {
+    if (!selected) return
+    setSaving(true)
+    setRoleError('')
+    try {
+      await api.patch(`/users/${selected._id}/approve`, { role: newRole })
+      setModal(null)
+      loadData()
+    } catch (err) {
+      setRoleError(err.response?.data?.error ?? 'Failed to approve user account.')
+    }
+    setSaving(false)
+  }
+
+  async function handleRejectUser() {
+    if (!selected) return
+    setSaving(true)
+    setRoleError('')
+    try {
+      await api.patch(`/users/${selected._id}/reject`, { reason: rejectionReason })
+      setModal(null)
+      loadData()
+    } catch (err) {
+      setRoleError(err.response?.data?.error ?? 'Failed to reject user account.')
+    }
+    setSaving(false)
   }
 
   async function handleSave() {
@@ -139,7 +181,6 @@ export default function UserManagement() {
 
     setSaving(true)
     try {
-      // BUG-24 fix: pass reason in body, not as a query param
       const url = hardDelete ? `/users/${selected._id}?hard=true` : `/users/${selected._id}`
       await api.delete(url, hardDelete ? { data: { reason: deleteReason } } : undefined)
       setModal(null)
@@ -149,6 +190,8 @@ export default function UserManagement() {
     }
     setSaving(false)
   }
+
+  const pendingCount = users.filter(u => u.status === 'PENDING').length
 
   const filtered = users.filter((u) => {
     const matchesSearch =
@@ -170,7 +213,9 @@ export default function UserManagement() {
 
   const LIFECYCLE_BADGES = {
     PENDING: 'bg-[#ffdcbb] text-[#543100] border-[#dd9235]',
+    APPROVED: 'bg-[#a0f3d4] text-[#00513e] border-[#086b53]',
     ACTIVE: 'bg-[#a0f3d4] text-[#00513e] border-[#086b53]',
+    REJECTED: 'bg-[#ffdad6] text-[#93000a] border-[#ba1a1a]',
     SUSPENDED: 'bg-[#ffdad6] text-[#93000a] border-[#ba1a1a]',
     ALUMNI: 'bg-[#d8e2ff] text-[#001a41] border-[#1f3864]',
     ARCHIVED: 'bg-[#f0eded] text-[#747780] border-[#c4c6d0]',
@@ -206,7 +251,15 @@ export default function UserManagement() {
     <AppLayout role="admin">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-[32px] font-semibold text-[#03224d]">User Lifecycle Management</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-[32px] font-semibold text-[#03224d]">User Lifecycle Management</h2>
+            {pendingCount > 0 && (
+              <span className="bg-[#dd9235] text-white text-[12px] font-bold px-3 py-1 rounded-full shadow-xs flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                {pendingCount} Pending Approval
+              </span>
+            )}
+          </div>
           <p className="text-[14px] text-[#44474f]">{users.length} registered accounts across all lifecycle stages</p>
         </div>
 
@@ -226,8 +279,10 @@ export default function UserManagement() {
             className="px-3 py-2 border border-[#c4c6d0] rounded-lg text-[13px] bg-white font-medium focus:outline-none focus:border-[#03224d]"
           >
             <option value="ALL">All Statuses ({users.length})</option>
-            <option value="PENDING">Pending ({users.filter(u => u.status === 'PENDING').length})</option>
+            <option value="PENDING">Pending Approval ({pendingCount})</option>
+            <option value="APPROVED">Approved ({users.filter(u => u.status === 'APPROVED').length})</option>
             <option value="ACTIVE">Active ({users.filter(u => u.status === 'ACTIVE').length})</option>
+            <option value="REJECTED">Rejected ({users.filter(u => u.status === 'REJECTED').length})</option>
             <option value="SUSPENDED">Suspended ({users.filter(u => u.status === 'SUSPENDED').length})</option>
             <option value="ALUMNI">Alumni ({users.filter(u => u.status === 'ALUMNI').length})</option>
             <option value="ARCHIVED">Archived ({users.filter(u => u.status === 'ARCHIVED').length})</option>
@@ -254,7 +309,26 @@ export default function UserManagement() {
             rows={filtered}
             emptyMessage="No user accounts match your criteria."
             actions={(row) => (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
+                {row.status === 'PENDING' && (
+                  <>
+                    <button
+                      onClick={() => openApproveModal(row)}
+                      className="flex items-center gap-1 text-[12px] font-bold text-white bg-[#086b53] hover:bg-[#00513e] px-2.5 py-1 rounded transition-colors cursor-pointer shadow-xs"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">check_circle</span>
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => openRejectModal(row)}
+                      className="flex items-center gap-1 text-[12px] font-bold text-[#93000a] bg-[#ffdad6] hover:bg-[#ffb4ab] px-2.5 py-1 rounded transition-colors cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">cancel</span>
+                      Reject
+                    </button>
+                  </>
+                )}
+
                 <button
                   onClick={() => openEditModal(row)}
                   className="flex items-center gap-1 text-[12px] font-bold text-[#03224d] hover:underline cursor-pointer"
@@ -544,6 +618,112 @@ export default function UserManagement() {
               <button
                 onClick={() => setModal(null)}
                 className="px-5 py-2.5 border border-[#c4c6d0] text-[#44474f] rounded text-[14px] font-bold hover:bg-[#f0eded] cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Approve User Modal */}
+      {modal === 'approve' && selected && (
+        <Modal title="Approve User Registration" onClose={() => setModal(null)} size="md">
+          <div className="space-y-4">
+            <div className="p-4 bg-[#086b53]/10 border border-[#086b53]/20 rounded-xl flex items-center justify-between">
+              <div>
+                <p className="text-[15px] font-bold text-[#03224d]">{selected.fullName}</p>
+                <p className="text-[12px] text-[#44474f]">{selected.email}</p>
+              </div>
+              <span className="text-[11px] font-bold px-2.5 py-1 rounded bg-[#dd9235]/20 text-[#543100] border border-[#dd9235]/40">
+                Requested: {selected.role?.replace('_', ' ').toUpperCase()}
+              </span>
+            </div>
+
+            <div>
+              <label className="block text-[12px] font-bold text-[#44474f] uppercase tracking-wider mb-2">
+                Verify or Assign System Role
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {ROLES.map((r) => (
+                  <label
+                    key={r}
+                    className={`flex items-center gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+                      newRole === r ? 'border-[#086b53] bg-[#086b53]/10 font-bold' : 'border-[#c4c6d0] hover:bg-[#f6f3f2]'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="approveRole"
+                      value={r}
+                      checked={newRole === r}
+                      onChange={() => setNewRole(r)}
+                      className="text-[#086b53]"
+                    />
+                    <span className="text-[13px] capitalize">{r.replace('_', ' ')}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-[11px] text-[#44474f] mt-1">
+                You may optionally adjust the assigned role before approving.
+              </p>
+            </div>
+
+            {roleError && <p className="text-[13px] text-[#ba1a1a] font-medium">{roleError}</p>}
+
+            <div className="flex gap-3 pt-2 border-t border-[#c4c6d0]/50">
+              <button
+                onClick={handleApproveUser}
+                disabled={saving}
+                className="bg-[#086b53] text-white px-6 py-2.5 rounded-lg text-[14px] font-bold hover:bg-[#00513e] disabled:opacity-50 cursor-pointer shadow-sm flex items-center gap-1.5"
+              >
+                {saving ? 'Approving…' : 'Approve User Account'}
+              </button>
+              <button
+                onClick={() => setModal(null)}
+                className="px-5 py-2.5 border border-[#c4c6d0] text-[#44474f] rounded-lg text-[14px] font-bold hover:bg-[#f0eded] cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Reject User Modal */}
+      {modal === 'reject' && selected && (
+        <Modal title="Reject User Registration" onClose={() => setModal(null)} size="sm">
+          <div className="space-y-4">
+            <p className="text-[14px] text-[#44474f]">
+              Are you sure you want to reject the registration request for <strong>{selected.fullName}</strong> ({selected.email})?
+            </p>
+
+            <div>
+              <label className="block text-[12px] font-bold text-[#ba1a1a] uppercase tracking-wider mb-1">
+                Rejection Reason (Optional)
+              </label>
+              <textarea
+                rows={3}
+                placeholder="e.g. Identity verification unconfirmed or invalid email address domain..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                className="w-full border border-[#c4c6d0] rounded-lg p-2.5 text-[13px] focus:outline-none focus:border-[#ba1a1a]"
+              />
+            </div>
+
+            {roleError && <p className="text-[13px] text-[#ba1a1a] font-medium">{roleError}</p>}
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={handleRejectUser}
+                disabled={saving}
+                className="bg-[#ba1a1a] text-white px-6 py-2.5 rounded-lg text-[14px] font-bold hover:bg-[#93000a] disabled:opacity-50 cursor-pointer shadow-sm"
+              >
+                {saving ? 'Rejecting…' : 'Confirm Rejection'}
+              </button>
+              <button
+                onClick={() => setModal(null)}
+                className="px-5 py-2.5 border border-[#c4c6d0] text-[#44474f] rounded-lg text-[14px] font-bold hover:bg-[#f0eded] cursor-pointer"
               >
                 Cancel
               </button>
