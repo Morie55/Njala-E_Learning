@@ -144,6 +144,14 @@ export default function AwaitingApproval() {
           </button>
 
           <button
+            onClick={() => navigate('/select-role')}
+            className="w-full sm:w-auto bg-[#03224d] hover:bg-[#1f3864] text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm hover:shadow flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[18px]">edit</span>
+            Change Role Request
+          </button>
+
+          <button
             onClick={() => signOut(() => navigate('/sign-in'))}
             className="w-full sm:w-auto border border-[#c4c6d0] text-[#1b1c1c] hover:bg-[#f6f3f2] px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
           >

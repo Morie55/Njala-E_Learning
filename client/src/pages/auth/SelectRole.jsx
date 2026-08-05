@@ -30,21 +30,13 @@ const ROLES = [
     color: 'from-[#dd9235]/10 to-[#dd9235]/5 border-[#dd9235]/30 text-[#dd9235]',
     description: 'Oversee departmental courses, lecturers, student performance, and generate academic reports.',
   },
-  {
-    id: 'admin',
-    title: 'System Administrator',
-    icon: 'admin_panel_settings',
-    badge: 'Governance',
-    color: 'from-[#1f3864]/10 to-[#1f3864]/5 border-[#1f3864]/30 text-[#1f3864]',
-    description: 'Full system governance, user account approvals, platform configuration, and security audit logs.',
-  },
 ]
 
 export default function SelectRole() {
-  const [selectedRole, setSelectedRole] = useState('student')
+  const { dbUser, refetchUser } = useUser()
+  const [selectedRole, setSelectedRole] = useState(dbUser?.requestedRole || 'student')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const { dbUser, refetchUser } = useUser()
   const { signOut } = useClerk()
   const navigate = useNavigate()
 
@@ -60,7 +52,7 @@ export default function SelectRole() {
     try {
       await api.patch('/users/me/select-role', { role: selectedRole })
       await refetchUser()
-      navigate('/pending-approval', { replace: true })
+      navigate('/awaiting-approval', { replace: true })
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'Failed to submit role request.')
     } finally {
@@ -96,7 +88,7 @@ export default function SelectRole() {
         <div className="text-center max-w-xl mx-auto mb-8">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#086b53]/10 text-[#086b53] text-[12px] font-bold mb-3">
             <span className="w-2 h-2 rounded-full bg-[#086b53] animate-pulse" />
-            Step 1 of 2: Role Selection
+            Role Selection
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold text-[#03224d]">Select Your System Role</h2>
           <p className="text-sm text-[#44474f] mt-2 leading-relaxed">
@@ -112,7 +104,7 @@ export default function SelectRole() {
         )}
 
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             {ROLES.map((role) => {
               const isSelected = selectedRole === role.id
               return (
@@ -157,7 +149,7 @@ export default function SelectRole() {
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-[#c4c6d0]/50">
             <p className="text-xs text-[#44474f] text-center sm:text-left">
-              An administrator will verify your credentials and assign permissions based on your selected role.
+              An administrator will verify your credentials and assign permissions based on your requested role.
             </p>
             <button
               type="submit"
