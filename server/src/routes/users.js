@@ -43,7 +43,7 @@ router.post('/sync', authRateLimiter, requireAuth, async (req, res, next) => {
         avatarUrl,
         role: isFirstUser ? 'admin' : 'student',
         requestedRole: isFirstUser ? 'admin' : sanitizedRequestedRole,
-        roleSelected: true,
+        roleSelected: isFirstUser ? true : false,
         status: isFirstUser ? 'ACTIVE' : 'PENDING',
       })
     } else {
@@ -125,6 +125,7 @@ router.patch('/me/select-role', requireAuth, populateUser, async (req, res, next
     if (!user) return res.status(404).json({ error: 'User not found' })
 
     user.role = role
+    user.requestedRole = role
     user.roleSelected = true
     user.status = 'PENDING'
     await user.save()
