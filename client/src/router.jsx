@@ -104,20 +104,19 @@ function SelectRoleGuard() {
   if (!dbUser) return <Navigate to="/sign-in" replace />
   if (status === 'APPROVED' || status === 'ACTIVE') return <Navigate to="/dashboard" replace />
   if (status === 'REJECTED') return <Navigate to="/account-rejected" replace />
-  if (status === 'PENDING' && dbUser.roleSelected) return <Navigate to="/pending-approval" replace />
+  if (status === 'PENDING') return <Navigate to="/awaiting-approval" replace />
   return <SelectRole />
 }
 
-/** Route Guard for Pending Approval page (`/pending-approval`) */
-function PendingApprovalGuard() {
+/** Route Guard for Awaiting Approval page */
+function AwaitingApprovalGuard() {
   const { dbUser, status, isLoaded } = useUser()
   if (!isLoaded) return <PageLoader />
   if (!dbUser) return <Navigate to="/sign-in" replace />
   if (status === 'APPROVED' || status === 'ACTIVE') return <Navigate to="/dashboard" replace />
   if (status === 'REJECTED') return <Navigate to="/account-rejected" replace />
   if (status === 'PENDING' && dbUser.mustChangePassword) return <Navigate to="/activate" replace />
-  if (status === 'PENDING' && !dbUser.roleSelected) return <Navigate to="/select-role" replace />
-  return <PendingApproval />
+  return <AwaitingApproval />
 }
 
 /** Ensures user account is approved before granting access to system routes */
@@ -131,13 +130,9 @@ function RequireApproved({ children }) {
   }
 
   if (status === 'PENDING') {
-    if (dbUser.mustChangePassword) {
-      return <Navigate to="/activate" replace />
-    }
-    if (!dbUser.roleSelected) {
-      return <Navigate to="/select-role" replace />
-    }
-    return <Navigate to="/pending-approval" replace />
+    return dbUser.mustChangePassword
+      ? <Navigate to="/activate" replace />
+      : <Navigate to="/awaiting-approval" replace />
   }
 
   return children
@@ -235,11 +230,11 @@ const router = createBrowserRouter([
   },
   {
     path: '/awaiting-approval',
-    element: <RequireAuth><Suspense fallback={<PageLoader />}><PendingApprovalGuard /></Suspense></RequireAuth>,
+    element: <RequireAuth><Suspense fallback={<PageLoader />}><AwaitingApprovalGuard /></Suspense></RequireAuth>,
   },
   {
     path: '/pending-approval',
-    element: <RequireAuth><Suspense fallback={<PageLoader />}><PendingApprovalGuard /></Suspense></RequireAuth>,
+    element: <RequireAuth><Suspense fallback={<PageLoader />}><AwaitingApprovalGuard /></Suspense></RequireAuth>,
   },
   {
     path: '/account-rejected',

@@ -138,8 +138,8 @@ export default function SignUp() {
                 identityPreviewText: 'text-[#1b1c1c] font-medium text-xs sm:text-sm',
               },
             }}
-            fallbackRedirectUrl="/select-role"
-            forceRedirectUrl="/select-role"
+            fallbackRedirectUrl="/awaiting-approval"
+            forceRedirectUrl="/awaiting-approval"
           />
 
           {/* Help Footer */}

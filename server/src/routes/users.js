@@ -43,7 +43,7 @@ router.post('/sync', authRateLimiter, requireAuth, async (req, res, next) => {
         avatarUrl,
         role: isFirstUser ? 'admin' : 'student',
         requestedRole: isFirstUser ? 'admin' : sanitizedRequestedRole,
-        roleSelected: isFirstUser ? true : false,
+        roleSelected: true,
         status: isFirstUser ? 'ACTIVE' : 'PENDING',
       })
     } else {
@@ -111,12 +111,13 @@ router.post('/me/activate', authRateLimiter, requireAuth, populateUser, async (r
 
 /**
  * PATCH /api/v1/users/me/select-role
- * Allows a newly registered user to select their desired system role.
+ * Records the user's requested role. Does NOT set role — that is admin-only.
+ * Only updates requestedRole, roleSelected, and keeps status PENDING.
  */
 router.patch('/me/select-role', requireAuth, populateUser, async (req, res, next) => {
   try {
     const { role } = req.body
-    const allowedRoles = ['student', 'lecturer', 'dept_head', 'admin']
+    const allowedRoles = ['student', 'lecturer', 'dept_head']
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({ error: 'Invalid system role selected.' })
     }
@@ -124,7 +125,8 @@ router.patch('/me/select-role', requireAuth, populateUser, async (req, res, next
     const user = await User.findById(req.dbUser._id)
     if (!user) return res.status(404).json({ error: 'User not found' })
 
-    user.role = role
+    // IMPORTANT: Only store in requestedRole — never write role from user input.
+    // The real role field is only set by admin approve action.
     user.requestedRole = role
     user.roleSelected = true
     user.status = 'PENDING'
@@ -135,7 +137,7 @@ router.patch('/me/select-role', requireAuth, populateUser, async (req, res, next
       action: 'ROLE_SELECTED',
       targetModel: 'User',
       targetId: user._id.toString(),
-      details: { selectedRole: role, email: user.email },
+      details: { requestedRole: role, email: user.email },
     })
 
     res.json(user)

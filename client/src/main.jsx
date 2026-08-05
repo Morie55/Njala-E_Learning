@@ -52,7 +52,7 @@ createRoot(document.getElementById('root')).render(
     {isDummyKey ? (
       <MissingKeyBanner />
     ) : (
-      <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignInUrl="/dashboard" afterSignUpUrl="/dashboard">
+      <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
         <UserProvider>
           <RouterProvider router={router} />
         </UserProvider>
