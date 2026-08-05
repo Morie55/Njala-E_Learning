@@ -34,15 +34,26 @@ export function UserProvider({ children }) {
     }
 
     let cancelled = false
+    let retries = 0
     async function syncAndFetch() {
       try {
-        await api.post('/users/sync')
+        // Always send {} so axios includes Content-Type: application/json
+        // (without a body, axios omits the header and express.json() skips parsing)
+        await api.post('/users/sync', {})
         const { data } = await api.get('/users/me')
         if (!cancelled) setDbUser(data)
       } catch (err) {
-        if (!cancelled) setError(err.message)
+        if (cancelled) return
+        // Retry once after 1.5s — handles transient network/auth token delays at sign-up
+        if (retries === 0) {
+          retries++
+          setTimeout(syncAndFetch, 1500)
+          return
+        }
+        setError(err.message)
       } finally {
-        if (!cancelled) setIsLoaded(true)
+        // Only mark loaded after success or second failure — not after first retry
+        if (!cancelled && retries !== 1) setIsLoaded(true)
       }
     }
 

@@ -24,7 +24,7 @@ router.post('/sync', authRateLimiter, requireAuth, async (req, res, next) => {
     const avatarUrl = clerkUser.imageUrl ?? ''
     const clerkRole = clerkUser.publicMetadata?.role
 
-    const rawRequestedRole = req.body.requestedRole || clerkUser.unsafeMetadata?.requestedRole
+    const rawRequestedRole = req.body?.requestedRole || clerkUser.unsafeMetadata?.requestedRole
     const allowedRequestedRoles = ['student', 'lecturer', 'dept_head']
     const sanitizedRequestedRole = allowedRequestedRoles.includes(rawRequestedRole) ? rawRequestedRole : 'student'
 

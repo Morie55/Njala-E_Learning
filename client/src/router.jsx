@@ -110,8 +110,9 @@ function SelectRoleGuard() {
 
 /** Route Guard for Awaiting Approval page */
 function AwaitingApprovalGuard() {
-  const { dbUser, status, isLoaded } = useUser()
+  const { dbUser, status, isLoaded, isSignedIn } = useUser()
   if (!isLoaded) return <PageLoader />
+  if (!dbUser && isSignedIn) return <PageLoader />
   if (!dbUser) return <Navigate to="/sign-in" replace />
   if (status === 'APPROVED' || status === 'ACTIVE') return <Navigate to="/dashboard" replace />
   if (status === 'REJECTED') return <Navigate to="/account-rejected" replace />
@@ -121,8 +122,13 @@ function AwaitingApprovalGuard() {
 
 /** Ensures user account is approved before granting access to system routes */
 function RequireApproved({ children }) {
-  const { dbUser, status, isLoaded } = useUser()
+  const { dbUser, status, isLoaded, isSignedIn } = useUser()
   if (!isLoaded) return <LayoutLoader />
+
+  // Sync failed but Clerk says user is signed in — show loader, UserContext will retry
+  if (!dbUser && isSignedIn) return <PageLoader />
+
+  // Not signed in at all
   if (!dbUser) return <Navigate to="/sign-in" replace />
 
   if (status === 'REJECTED') {
