@@ -21,7 +21,9 @@ export async function populateUser(req, res, next) {
       const s = String(user.status).toUpperCase()
       user.status = s === 'GRADUATED' ? 'ALUMNI' : s
     } else {
-      user.status = 'ACTIVE'
+      // No status field — default to PENDING (fail-safe: requires admin approval).
+      // ACTIVE is only ever set by the first-user bootstrap or an admin approve action.
+      user.status = 'PENDING'
     }
 
     req.dbUser = user
