@@ -33,11 +33,17 @@ export default function Grades() {
   const [transcriptData, setTranscriptData] = useState(null)
   const [downloading, setDownloading] = useState(false)
   const [error, setError] = useState('')
+  const [accountPending, setAccountPending] = useState(false)
 
   useEffect(() => {
     const validStudentId = studentId && studentId !== 'undefined' && studentId !== 'null' && studentId.length === 24 ? studentId : null
     const studentQuery = validStudentId ? `?studentId=${validStudentId}` : ''
     const coursesQuery = validStudentId ? '/courses' : '/courses?enrolled=true'
+
+    const isPendingError = (err) => {
+      const msg = err?.message || ''
+      return msg.includes('ACCOUNT_PENDING_APPROVAL') || msg.includes('awaiting administrator approval') || msg.includes('PENDING')
+    }
 
     Promise.allSettled([
       api.get(`/submissions/me${studentQuery}`),
@@ -50,12 +56,22 @@ export default function Grades() {
         if (tRes.status === 'fulfilled') setTranscriptData(tRes.value.data ?? null)
 
         if (sRes.status === 'rejected' && cRes.status === 'rejected' && tRes.status === 'rejected') {
-          setError('Failed to load academic records.')
+          // Check if the failure is because the account is pending admin approval
+          const allPending = [sRes.reason, cRes.reason, tRes.reason].some(isPendingError)
+          if (allPending) {
+            setAccountPending(true)
+          } else {
+            setError('Failed to load academic records. Please try again or contact support.')
+          }
         }
       })
       .catch((err) => {
         console.error('Failed to load grades data:', err)
-        setError('Failed to load academic records.')
+        if (isPendingError(err)) {
+          setAccountPending(true)
+        } else {
+          setError('Failed to load academic records. Please try again or contact support.')
+        }
       })
       .finally(() => setLoading(false))
   }, [studentId])
@@ -109,7 +125,24 @@ export default function Grades() {
 
   return (
     <AppLayout>
-      {studentId && transcriptData?.student && (
+      {/* Pending Approval Banner */}
+      {accountPending && (
+        <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+          <div className="w-20 h-20 rounded-full bg-[#fff3cd] flex items-center justify-center mb-5 shadow-md">
+            <span className="material-symbols-outlined text-[44px] text-[#dd9235]" style={{ fontVariationSettings: "'FILL' 1" }}>pending_actions</span>
+          </div>
+          <h2 className="text-[24px] font-bold text-[#03224d] mb-2">Account Awaiting Approval</h2>
+          <p className="text-[15px] text-[#44474f] max-w-md mb-6">
+            Your account is currently pending administrator approval. Once approved, your grades and academic records will be available here.
+          </p>
+          <div className="inline-flex items-center gap-2 bg-[#fff3cd] border border-[#dd9235]/40 text-[#8a5700] text-[13px] font-semibold px-5 py-3 rounded-xl">
+            <span className="material-symbols-outlined text-[18px]">schedule</span>
+            Awaiting admin review — please check back soon.
+          </div>
+        </div>
+      )}
+
+      {!accountPending && studentId && transcriptData?.student && (
         <div className="mb-6 p-4 bg-[#eefaf6] border border-[#86efcc] rounded-xl flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 text-[#00513e]">
             <span className="material-symbols-outlined text-[24px]">admin_panel_settings</span>
@@ -122,6 +155,8 @@ export default function Grades() {
           </div>
         </div>
       )}
+
+      {accountPending ? null : (<>
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6 sm:mb-8">
@@ -288,6 +323,7 @@ export default function Grades() {
           </div>
         )}
       </div>
+      </>)}
     </AppLayout>
   )
 }

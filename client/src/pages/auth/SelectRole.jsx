@@ -52,7 +52,7 @@ export default function SelectRole() {
     try {
       await api.patch('/users/me/select-role', { role: selectedRole })
       await refetchUser()
-      navigate('/awaiting-approval', { replace: true })
+      navigate('/pending-approval', { replace: true })
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'Failed to submit role request.')
     } finally {
