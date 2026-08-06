@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "purge:users": "node --env-file=.env src/scripts/purgeAllUsers.js"
   },
   "keywords": [],
   "author": "",

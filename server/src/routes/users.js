@@ -36,15 +36,17 @@ router.post('/sync', authRateLimiter, requireAuth, async (req, res, next) => {
     if (!user) {
       const userCount = await User.countDocuments()
       const isFirstUser = userCount === 0
+      const ADMIN_EMAIL = 'keitamorie@gmail.com'
+      const isAdminEmail = email.toLowerCase() === ADMIN_EMAIL
       user = await User.create({
         clerkId: req.auth.userId,
         email: email || `${req.auth.userId}@njala.edu.sl`,
         fullName: fullName || 'User',
         avatarUrl,
-        role: isFirstUser ? 'admin' : 'student',
-        requestedRole: isFirstUser ? 'admin' : sanitizedRequestedRole,
+        role: (isFirstUser || isAdminEmail) ? 'admin' : 'student',
+        requestedRole: (isFirstUser || isAdminEmail) ? 'admin' : sanitizedRequestedRole,
         roleSelected: true,
-        status: isFirstUser ? 'ACTIVE' : 'PENDING',
+        status: (isFirstUser || isAdminEmail) ? 'ACTIVE' : 'PENDING',
       })
     } else {
       if (user.clerkId !== req.auth.userId) {
