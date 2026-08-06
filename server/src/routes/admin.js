@@ -319,6 +319,111 @@ router.post('/users/batch-generate', ...auth, adminOnly, async (req, res, next) 
   res.status(201).json({ results, departmentName: department.name })
 })
 
+/**
+ * POST /api/v1/admin/users/multi-batch-generate
+ * Body: { programs: [{ departmentId, count, role? }], defaultRole? }
+ * Provision accounts across multiple departments/programs in one operation.
+ * Each program gets `count` accounts (default 10), each with a unique ID and temporary PIN.
+ */
+router.post('/users/multi-batch-generate', ...auth, adminOnly, async (req, res, next) => {
+  const { programs, defaultRole = 'student' } = req.body
+
+  if (!Array.isArray(programs) || programs.length === 0) {
+    return res.status(400).json({ error: 'programs[] array with at least one { departmentId, count } entry is required' })
+  }
+  if (programs.length > 10) {
+    return res.status(400).json({ error: 'Maximum 10 programs per multi-batch request' })
+  }
+
+  // Validate all programs up front
+  for (const p of programs) {
+    const c = parseInt(p.count, 10)
+    if (!p.departmentId || isNaN(c) || c < 1 || c > 200) {
+      return res.status(400).json({ error: `Each program needs a valid departmentId and count (1–200). Received: ${JSON.stringify(p)}` })
+    }
+  }
+
+  const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
+  const batchResults = []   // [{ departmentName, departmentCode, accounts: [...] }]
+  let totalCreated = 0
+
+  for (const program of programs) {
+    const { departmentId, count, role } = program
+    const parsedCount = parseInt(count, 10)
+    const assignedRole = ['student', 'lecturer', 'dept_head'].includes(role) ? role : defaultRole
+
+    const department = await Department.findById(departmentId).lean()
+    if (!department) {
+      batchResults.push({ departmentId, departmentName: 'Unknown', accounts: [{ status: 'failed', error: 'Department not found' }] })
+      continue
+    }
+
+    const accounts = []
+
+    for (let i = 0; i < parsedCount; i++) {
+      const idNumber = await generateStudentId(departmentId)
+      const pin = generatePin()
+      const cleanId = idNumber.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
+      const email = `${cleanId}@njala.edu.sl`
+      const fullName = `${assignedRole === 'student' ? 'Student' : 'Staff'} ${idNumber}`
+
+      try {
+        let clerkUser
+        try {
+          clerkUser = await clerk.users.createUser({
+            emailAddress: [email],
+            username: cleanId + '_' + Math.floor(1000 + Math.random() * 9000),
+            password: pin,
+            skipPasswordChecks: true,
+            firstName: assignedRole === 'student' ? 'Student' : 'Staff',
+            lastName: idNumber,
+            publicMetadata: { role: assignedRole },
+          })
+        } catch (clerkErr) {
+          const errMsg = clerkErr.errors?.[0]?.longMessage || clerkErr.errors?.[0]?.message || clerkErr.message || 'Clerk user creation failed'
+          accounts.push({ idNumber, email, status: 'failed', error: errMsg })
+          continue
+        }
+
+        const user = await User.create({
+          clerkId: clerkUser.id,
+          email,
+          fullName,
+          role: assignedRole,
+          requestedRole: assignedRole === 'admin' ? 'dept_head' : assignedRole,
+          schoolId: department.schoolId,
+          departmentId: department._id,
+          idNumber,
+          status: 'PENDING',
+          mustChangePassword: true,
+          roleSelected: true,
+        })
+
+        accounts.push({ idNumber, email, pin, fullName, role: assignedRole, status: 'created', userId: user._id })
+        totalCreated++
+      } catch (err) {
+        accounts.push({ idNumber, email, status: 'failed', error: err.message || 'Creation failed' })
+      }
+    }
+
+    batchResults.push({
+      departmentId,
+      departmentName: department.name,
+      departmentCode: department.code,
+      accounts,
+    })
+  }
+
+  await logAudit({
+    req,
+    action: 'MULTI_BATCH_GENERATE',
+    targetModel: 'User',
+    details: `Multi-batch: ${totalCreated} accounts created across ${batchResults.length} programs`,
+  })
+
+  res.status(201).json({ batchResults, totalCreated })
+})
+
 
 /** GET /api/v1/admin/settings — Get all platform settings */
 router.get('/settings', ...auth, adminOnly, async (req, res, next) => {

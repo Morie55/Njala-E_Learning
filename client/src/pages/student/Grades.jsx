@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
 import LoadingSkeleton from '../../components/ui/LoadingSkeleton'
 import api from '../../lib/api'
@@ -23,6 +24,8 @@ function ScoreChip({ score, maxScore }) {
 }
 
 export default function Grades() {
+  const [searchParams] = useSearchParams()
+  const studentId = searchParams.get('studentId')
   const [submissions, setSubmissions] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedCourse, setSelectedCourse] = useState('')
@@ -32,10 +35,13 @@ export default function Grades() {
   const [error, setError] = useState('')
 
   useEffect(() => {
+    const studentQuery = studentId ? `?studentId=${studentId}` : ''
+    const coursesQuery = studentId ? '/courses' : '/courses?enrolled=true'
+
     Promise.all([
-      api.get('/submissions/me'),
-      api.get('/courses?enrolled=true'),
-      api.get('/submissions/transcript'),
+      api.get(`/submissions/me${studentQuery}`),
+      api.get(coursesQuery),
+      api.get(`/submissions/transcript${studentQuery}`),
     ])
       .then(([s, c, t]) => {
         setSubmissions(s.data?.submissions ?? [])
@@ -47,7 +53,7 @@ export default function Grades() {
         setError('Failed to load academic records.')
       })
       .finally(() => setLoading(false))
-  }, [])
+  }, [studentId])
 
   const filtered = selectedCourse
     ? submissions.filter((s) => s.courseId === selectedCourse)
@@ -73,7 +79,8 @@ export default function Grades() {
     setDownloading(true)
     setError('')
     try {
-      const response = await api.get('/submissions/transcript?format=csv', {
+      const studentQuery = studentId ? `&studentId=${studentId}` : ''
+      const response = await api.get(`/submissions/transcript?format=csv${studentQuery}`, {
         responseType: 'blob',
       })
       const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' })
@@ -97,6 +104,20 @@ export default function Grades() {
 
   return (
     <AppLayout>
+      {studentId && transcriptData?.student && (
+        <div className="mb-6 p-4 bg-[#eefaf6] border border-[#86efcc] rounded-xl flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 text-[#00513e]">
+            <span className="material-symbols-outlined text-[24px]">admin_panel_settings</span>
+            <div>
+              <p className="text-[14px] font-bold">Overarching Admin Access — Viewing Student Academic Record</p>
+              <p className="text-[12px] opacity-90">
+                Student: <strong>{transcriptData.student.fullName}</strong> ({transcriptData.student.email}) • ID: {transcriptData.student.idNumber || 'N/A'} • {transcriptData.student.departmentName || 'Department'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6 sm:mb-8">
         <div>

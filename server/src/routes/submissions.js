@@ -17,7 +17,11 @@ const auth = [requireAuth, populateUser, enforceStatus]
 /** GET /api/v1/submissions/me  */
 router.get('/me', ...auth, async (req, res, next) => {
   try {
-    const subs = await Submission.find({ studentId: req.dbUser._id })
+    const targetStudentId = (['admin', 'dept_head', 'lecturer'].includes(req.dbUser.role) && req.query.studentId)
+      ? req.query.studentId
+      : req.dbUser._id
+
+    const subs = await Submission.find({ studentId: targetStudentId })
       .populate({ path: 'assignmentId', select: 'title maxScore courseId dueDate', populate: { path: 'courseId', select: 'code title semester' } })
       .sort({ submittedAt: -1 }).lean()
     const enriched = subs.map(s => ({
@@ -37,14 +41,18 @@ router.get('/me', ...auth, async (req, res, next) => {
 /** GET /api/v1/submissions/transcript */
 router.get('/transcript', ...auth, async (req, res, next) => {
   try {
-    const student = await User.findById(req.dbUser._id)
+    const targetStudentId = (['admin', 'dept_head', 'lecturer'].includes(req.dbUser.role) && req.query.studentId)
+      ? req.query.studentId
+      : req.dbUser._id
+
+    const student = await User.findById(targetStudentId)
       .populate('schoolId', 'name code')
       .populate('departmentId', 'name code')
       .lean()
 
     if (!student) return res.status(404).json({ error: 'Student profile not found' })
 
-    const subs = await Submission.find({ studentId: req.dbUser._id })
+    const subs = await Submission.find({ studentId: targetStudentId })
       .populate({
         path: 'assignmentId',
         select: 'title maxScore courseId dueDate',
@@ -278,11 +286,12 @@ router.patch('/:id/grade', ...auth, async (req, res, next) => {
 
 /** GET /api/v1/submissions/gpa — Student cumulative and semester GPA */
 router.get('/gpa', ...auth, async (req, res, next) => {
-  if (req.dbUser.role !== 'student') return res.status(403).json({ error: 'Students only' })
   try {
-    const { _id } = req.dbUser
+    const targetStudentId = (['admin', 'dept_head', 'lecturer'].includes(req.dbUser.role) && req.query.studentId)
+      ? req.query.studentId
+      : req.dbUser._id
 
-    const subs = await Submission.find({ studentId: _id, score: { $ne: null } })
+    const subs = await Submission.find({ studentId: targetStudentId, score: { $ne: null } })
       .populate({
         path: 'assignmentId',
         select: 'maxScore courseId',

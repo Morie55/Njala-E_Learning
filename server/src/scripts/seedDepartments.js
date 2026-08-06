@@ -4,18 +4,18 @@ import School from '../models/School.js'
 import Department from '../models/Department.js'
 
 const DEFAULT_SCHOOLS = [
-  { name: 'School of Technology', code: 'TECH' },
-  { name: 'School of Agriculture & Food Sciences', code: 'AFS' },
-  { name: 'School of Education', code: 'EDU' },
-  { name: 'School of Environmental Sciences', code: 'ENV' },
-  { name: 'School of Social Sciences', code: 'SOC' },
-  { name: 'School of Basic Sciences', code: 'SBS' },
-  { name: 'School of Basic Education', code: 'SBE' },
-  { name: 'School of Community Health Sciences', code: 'CHS' },
-  { name: 'School of Natural Resources Management', code: 'NRM' },
-  { name: 'School of Nursing and Midwifery', code: 'SNM' },
-  { name: 'School of Veterinary Medicine', code: 'VET' },
-  { name: 'School of Postgraduate Studies', code: 'PGS' },
+  { name: 'School of Technology', code: 'TECH', isPrimary: true, status: 'active' },
+  { name: 'School of Agriculture & Food Sciences', code: 'AFS', isPrimary: false, status: 'active' },
+  { name: 'School of Education', code: 'EDU', isPrimary: false, status: 'active' },
+  { name: 'School of Environmental Sciences', code: 'ENV', isPrimary: false, status: 'active' },
+  { name: 'School of Social Sciences', code: 'SOC', isPrimary: false, status: 'active' },
+  { name: 'School of Basic Sciences', code: 'SBS', isPrimary: false, status: 'active' },
+  { name: 'School of Basic Education', code: 'SBE', isPrimary: false, status: 'active' },
+  { name: 'School of Community Health Sciences', code: 'CHS', isPrimary: false, status: 'active' },
+  { name: 'School of Natural Resources Management', code: 'NRM', isPrimary: false, status: 'active' },
+  { name: 'School of Nursing and Midwifery', code: 'SNM', isPrimary: false, status: 'active' },
+  { name: 'School of Veterinary Medicine', code: 'VET', isPrimary: false, status: 'active' },
+  { name: 'School of Postgraduate Studies', code: 'PGS', isPrimary: false, status: 'active' },
 ]
 
 const BY_SCHOOL_CODE = {
@@ -40,11 +40,11 @@ async function seed() {
   await mongoose.connect(mongoUri, { dbName: 'nelms' })
   console.log('[SEED] Connected to MongoDB')
 
-  // 1. Ensure default Schools exist
+  // 1. Ensure default Schools exist and set primary flag
   for (const s of DEFAULT_SCHOOLS) {
     await School.findOneAndUpdate(
       { code: s.code },
-      { $setOnInsert: s },
+      { $set: { isPrimary: s.isPrimary, status: s.status }, $setOnInsert: { name: s.name, code: s.code } },
       { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     )
   }

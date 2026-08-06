@@ -13,7 +13,7 @@ const auth = [requireAuth, populateUser, enforceStatus]
 /** GET /api/v1/schools */
 router.get('/', ...auth, async (req, res, next) => {
   try {
-    const schools = await School.find({}).lean()
+    const schools = await School.find({}).sort({ isPrimary: -1, code: 1 }).lean()
     const enriched = await Promise.all(
       schools.map(async (s) => {
         const courseCount = await Course.countDocuments({ schoolId: s._id })
@@ -48,12 +48,14 @@ router.get('/stats', ...auth, async (req, res, next) => {
 router.post('/', ...auth, async (req, res, next) => {
   if (req.dbUser.role !== 'admin') return res.status(403).json({ error: 'Admin only' })
   try {
-    const { name, code, headId } = req.body
+    const { name, code, headId, isPrimary, status } = req.body
     if (!name || !code) return res.status(400).json({ error: 'Name and Code are required' })
 
     const payload = {
       name: name.trim(),
       code: code.trim().toUpperCase(),
+      isPrimary: Boolean(isPrimary),
+      status: status || 'active',
     }
     if (headId && headId.length === 24) payload.headId = headId
 
@@ -71,10 +73,12 @@ router.post('/', ...auth, async (req, res, next) => {
 router.patch('/:id', ...auth, async (req, res, next) => {
   if (req.dbUser.role !== 'admin') return res.status(403).json({ error: 'Admin only' })
   try {
-    const { name, code, headId } = req.body
+    const { name, code, headId, isPrimary, status } = req.body
     const payload = {}
     if (name) payload.name = name.trim()
     if (code) payload.code = code.trim().toUpperCase()
+    if (isPrimary !== undefined) payload.isPrimary = Boolean(isPrimary)
+    if (status !== undefined) payload.status = status
     if (headId !== undefined) payload.headId = headId && headId.length === 24 ? headId : null
 
     const school = await School.findByIdAndUpdate(req.params.id, payload, { returnDocument: 'after' })

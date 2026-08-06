@@ -85,7 +85,7 @@ export default function UploadMaterial() {
 
   /* ────────────────────────────────── render ────────────────────────────────── */
   return (
-    <AppLayout role="lecturer">
+    <AppLayout>
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-[12px] font-bold text-[#44474f] mb-6">
         <Link to="/courses" className="hover:text-[#03224d]">My Courses</Link>

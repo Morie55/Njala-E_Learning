@@ -8,6 +8,8 @@ const announcementSchema = new mongoose.Schema(
     postedBy:     { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     message:      { type: String, required: true, minlength: 10 },
     targetRole:   { type: String, enum: ['all', 'student', 'lecturer', 'dept_head'], default: 'all' },
+    category:     { type: String, enum: ['general', 'timetable', 'lecture_notes', 'exam_schedule', 'urgent'], default: 'general' },
+    fileUrl:      { type: String, default: '' },
     postedAt:     { type: Date, default: Date.now },
   },
   { timestamps: true }

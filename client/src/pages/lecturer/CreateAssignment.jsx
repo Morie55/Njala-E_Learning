@@ -62,7 +62,7 @@ export default function CreateAssignment() {
   const today = new Date().toISOString().slice(0, 16)
 
   return (
-    <AppLayout role="lecturer">
+    <AppLayout>
       <nav className="flex items-center gap-2 text-[12px] font-bold text-[#44474f] mb-6">
         <Link to="/courses" className="hover:text-[#03224d]">My Courses</Link>
         <span className="material-symbols-outlined text-[14px]">chevron_right</span>

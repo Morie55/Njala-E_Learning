@@ -332,6 +332,17 @@ export default function UserManagement() {
                   </>
                 )}
 
+                {row.role === 'student' && (
+                  <Link
+                    to={`/grades?studentId=${row._id}`}
+                    className="flex items-center gap-1 text-[12px] font-bold text-[#086b53] hover:underline cursor-pointer"
+                    title="View Student Academic Record & Grades"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">workspace_premium</span>
+                    Grades
+                  </Link>
+                )}
+
                 <button
                   onClick={() => openEditModal(row)}
                   className="flex items-center gap-1 text-[12px] font-bold text-[#03224d] hover:underline cursor-pointer"

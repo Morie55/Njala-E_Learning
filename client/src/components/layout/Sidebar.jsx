@@ -23,6 +23,8 @@ const NAV = {
   lecturer: [
     { icon: 'dashboard', label: 'Dashboard', path: '/dashboard' },
     { icon: 'menu_book', label: 'My Courses', path: '/courses' },
+    { icon: 'edit_square', label: 'Grade Entry', path: '/grade-entry' },
+    { icon: 'bar_chart', label: 'Progress Reports', path: '/progress' },
     { icon: 'chat', label: 'Messages', path: '/messages' },
     { icon: 'calendar_month', label: 'Timetable', path: '/timetable' },
     { icon: 'date_range', label: 'Academic Calendar', path: '/academic-calendar' },
@@ -33,6 +35,9 @@ const NAV = {
   dept_head: [
     { icon: 'dashboard', label: 'Dashboard', path: '/dashboard' },
     { icon: 'manage_search', label: 'Course Oversight', path: '/oversight' },
+    { icon: 'campaign', label: 'Broadcast Communication', path: '/announcements/new' },
+    { icon: 'edit_square', label: 'Grade Entry', path: '/grade-entry' },
+    { icon: 'bar_chart', label: 'Progress Reports', path: '/progress' },
     { icon: 'summarize', label: 'Dept Report', path: '/dept-report' },
     { icon: 'date_range', label: 'Academic Calendar', path: '/academic-calendar' },
     { icon: 'chat', label: 'Messages', path: '/messages' },
@@ -42,12 +47,15 @@ const NAV = {
   admin: [
     { icon: 'dashboard', label: 'Dashboard', path: '/dashboard' },
     { icon: 'group', label: 'Users', path: '/users' },
+    { icon: 'campaign', label: 'Broadcast Communication', path: '/announcements/new' },
+    { icon: 'edit_square', label: 'Grade Entry', path: '/grade-entry' },
+    { icon: 'bar_chart', label: 'Progress Reports', path: '/progress' },
     { icon: 'account_balance', label: 'Schools', path: '/schools' },
     { icon: 'business', label: 'Departments', path: '/departments' },
     { icon: 'date_range', label: 'Academic Calendar', path: '/academic-calendar' },
     { icon: 'calendar_month', label: 'Timetable', path: '/timetable' },
     { icon: 'chat', label: 'Messages', path: '/messages' },
-    { icon: 'bar_chart', label: 'Analytics', path: '/analytics' },
+    { icon: 'analytics', label: 'Analytics', path: '/analytics' },
     { icon: 'summarize', label: 'Dept Report', path: '/dept-report' },
     { icon: 'payments', label: 'Payments', path: '/payments' },
     { icon: 'manage_search', label: 'Audit Logs', path: '/audit-logs' },
@@ -57,6 +65,7 @@ const NAV = {
     { icon: 'dashboard', label: 'Alumni Portal', path: '/alumni/dashboard' },
     { icon: 'school', label: 'Past Courses', path: '/courses' },
     { icon: 'grade', label: 'Grades Record', path: '/grades' },
+    { icon: 'bar_chart', label: 'My Progress', path: '/progress' },
   ],
 }
 

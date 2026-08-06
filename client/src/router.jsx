@@ -87,6 +87,7 @@ const DiscussionBoard = lazy(() => import('./pages/shared/DiscussionBoard'))
 const DiscussionPost = lazy(() => import('./pages/shared/DiscussionPost'))
 const Timetable = lazy(() => import('./pages/shared/Timetable'))
 const Messages = lazy(() => import('./pages/shared/Messages'))
+const GradeEntry = lazy(() => import('./pages/shared/GradeEntry'))
 const AlumniDashboard = lazy(() => import('./pages/alumni/Dashboard'))
 
 /** Requires Clerk sign-in. Redirects to /sign-in if not authenticated. */
@@ -275,10 +276,11 @@ const router = createBrowserRouter([
         path: 'courses/:courseId/assignments/:id/submit',
         element: <RequireRole allowedRoles={['student']}><AssignmentSubmission /></RequireRole>,
       },
-      { path: 'grades', element: <RequireRole allowedRoles={['student', 'alumni', 'admin']}><Grades /></RequireRole> },
+      { path: 'grades', element: <RequireRole allowedRoles={['student', 'alumni', 'admin', 'dept_head', 'lecturer']}><Grades /></RequireRole> },
       { path: 'profile', element: <Profile /> },
-      { path: 'attendance', element: <RequireRole allowedRoles={['student']}><StudentAttendance /></RequireRole> },
-      { path: 'progress', element: <RequireRole allowedRoles={['student']}><StudentProgress /></RequireRole> },
+      { path: 'attendance', element: <RequireRole allowedRoles={['student', 'lecturer', 'dept_head', 'admin']}><StudentAttendance /></RequireRole> },
+      { path: 'progress', element: <RequireRole allowedRoles={['student', 'lecturer', 'dept_head', 'admin', 'alumni']}><StudentProgress /></RequireRole> },
+      { path: 'grade-entry', element: <RequireRole allowedRoles={['lecturer', 'dept_head', 'admin']}><GradeEntry /></RequireRole> },
       { path: 'courses/:id/certificate', element: <RequireRole allowedRoles={['student']}><CertificatePage /></RequireRole> },
       { path: 'courses/:courseId/discussions', element: <DiscussionBoard /> },
       { path: 'courses/:courseId/discussions/:postId', element: <DiscussionPost /> },

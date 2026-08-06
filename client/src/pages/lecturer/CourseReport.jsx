@@ -48,7 +48,7 @@ export default function CourseReport() {
   }
 
   if (loading) return (
-    <AppLayout role="lecturer">
+    <AppLayout>
       <div className="mb-6">
         <h2 className="text-[32px] font-semibold text-[#03224d]">Course Report</h2>
       </div>
@@ -57,13 +57,13 @@ export default function CourseReport() {
   )
 
   if (!report) return (
-    <AppLayout role="lecturer">
+    <AppLayout>
       <p className="text-[#ba1a1a] text-center py-20">Failed to load report. Check your access.</p>
     </AppLayout>
   )
 
   return (
-    <AppLayout role="lecturer">
+    <AppLayout>
       <nav className="flex items-center gap-2 text-[12px] font-bold text-[#44474f] mb-6">
         <Link to="/courses" className="hover:text-[#03224d]">My Courses</Link>
         <span className="material-symbols-outlined text-[14px]">chevron_right</span>

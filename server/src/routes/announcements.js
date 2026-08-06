@@ -67,8 +67,9 @@ router.post('/', ...auth, validateBody(createAnnouncementSchema), async (req, re
   const { role, _id, fullName } = req.dbUser
   if (!['lecturer', 'dept_head', 'admin'].includes(role)) return res.status(403).json({ error: 'Forbidden' })
   try {
-    const { courseId, message, title = 'Announcement', targetRole = 'all' } = req.body
+    const { courseId, departmentId, message, title = 'Announcement', targetRole = 'all', category = 'general', fileUrl = '' } = req.body
     const targetCourseId = courseId === 'global' ? null : courseId
+    const targetDeptId = departmentId || null
 
     // Lecturers can only post to courses they own
     if (targetCourseId && role === 'lecturer') {
@@ -81,9 +82,12 @@ router.post('/', ...auth, validateBody(createAnnouncementSchema), async (req, re
 
     const announcement = await Announcement.create({
       courseId: targetCourseId,
+      departmentId: targetDeptId,
       title,
       message,
       targetRole,
+      category,
+      fileUrl,
       postedBy: _id,
     })
 
@@ -93,7 +97,7 @@ router.post('/', ...auth, validateBody(createAnnouncementSchema), async (req, re
       const notifs = enrollments.map((e) => ({
         recipientId: e.studentId?.clerkId || e.studentId?._id?.toString(),
         senderId: req.auth.userId,
-        title: `Announcement: ${title}`,
+        title: `Broadcast [${category.toUpperCase()}]: ${title}`,
         message: message.slice(0, 100),
         type: 'announcement',
         link: `/courses/${targetCourseId}`,
@@ -101,10 +105,13 @@ router.post('/', ...auth, validateBody(createAnnouncementSchema), async (req, re
 
       if (notifs.length > 0) await Notification.insertMany(notifs)
     } else {
-      // Global announcement -> target specified role(s)
+      // Global/Dept-wide broadcast
       const userFilter = { deletedAt: null }
       if (targetRole !== 'all') {
         userFilter.role = targetRole
+      }
+      if (targetDeptId) {
+        userFilter.departmentId = targetDeptId
       }
 
       const targetUsers = await User.find(userFilter).select('clerkId email fullName role').lean()
@@ -112,7 +119,7 @@ router.post('/', ...auth, validateBody(createAnnouncementSchema), async (req, re
       const notifs = targetUsers.map((u) => ({
         recipientId: u.clerkId || u._id.toString(),
         senderId: req.auth.userId,
-        title: `Broadcast: ${title}`,
+        title: `Broadcast [${category.toUpperCase()}]: ${title}`,
         message: message.slice(0, 100),
         type: 'announcement',
         link: '/dashboard',
@@ -132,9 +139,9 @@ router.post('/', ...auth, validateBody(createAnnouncementSchema), async (req, re
                 const emailData = templates.broadcastAnnouncement(
                   u.fullName || 'User',
                   fullName || 'Platform Administrator',
-                  title,
+                  `[${category.toUpperCase()}] ${title}`,
                   message,
-                  'https://nelms.njala.edu.sl/dashboard'
+                  process.env.CLIENT_URL || 'https://nelms.njala.edu.sl/dashboard'
                 )
                 return sendMail({ to: u.email, subject: emailData.subject, html: emailData.html })
               })
@@ -148,6 +155,20 @@ router.post('/', ...auth, validateBody(createAnnouncementSchema), async (req, re
     }
 
     res.status(201).json(announcement)
+  } catch (err) { next(err) }
+})
+
+/** DELETE /api/v1/announcements/:id [owner or admin] */
+router.delete('/:id', ...auth, async (req, res, next) => {
+  const { role, _id } = req.dbUser
+  try {
+    const ann = await Announcement.findById(req.params.id)
+    if (!ann) return res.status(404).json({ error: 'Announcement not found' })
+    if (role !== 'admin' && ann.postedBy.toString() !== _id.toString()) {
+      return res.status(403).json({ error: 'Forbidden' })
+    }
+    await ann.deleteOne()
+    res.json({ message: 'Announcement deleted successfully' })
   } catch (err) { next(err) }
 })
 

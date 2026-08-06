@@ -6,11 +6,13 @@ import StatusBadge from '../../components/ui/StatusBadge'
 import Modal from '../../components/ui/Modal'
 import LoadingSkeleton from '../../components/ui/LoadingSkeleton'
 import api from '../../lib/api'
+import { useUser } from '../../hooks/useUser'
 
 const EMPTY_FORM = { title: '', code: '', semester: '', status: 'draft', schoolId: '', departmentId: '' }
 
 export default function CourseManagement() {
   const navigate = useNavigate()
+  const { role } = useUser()
   const [courses, setCourses] = useState([])
   const [schools, setSchools] = useState([])
   const [departments, setDepartments] = useState([])
@@ -24,7 +26,8 @@ export default function CourseManagement() {
 
   async function load() {
     try {
-      const [c, s] = await Promise.all([api.get('/courses?owned=true'), api.get('/schools')])
+      const courseEndpoint = role === 'admin' ? '/courses' : '/courses?owned=true'
+      const [c, s] = await Promise.all([api.get(courseEndpoint), api.get('/schools')])
       setCourses(c.data?.courses ?? [])
       setSchools(s.data?.schools ?? [])
     } catch (_) {}
@@ -33,7 +36,7 @@ export default function CourseManagement() {
 
   useEffect(() => {
     load()
-  }, [])
+  }, [role])
 
   // Fetch departments when school selection changes
   useEffect(() => {
@@ -104,7 +107,7 @@ export default function CourseManagement() {
   ]
 
   return (
-    <AppLayout role="lecturer">
+    <AppLayout>
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
         <div>
           <h2 className="text-[24px] sm:text-[32px] font-semibold text-[#03224d]">My Courses</h2>

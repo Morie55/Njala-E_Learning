@@ -40,7 +40,16 @@ router.get('/', ...auth, async (req, res, next) => {
         }
       })
     } else {
-      assignments = await Assignment.find({ createdBy: _id })
+      let filter = { createdBy: _id }
+      if (role === 'admin') {
+        filter = {}
+      } else if (role === 'dept_head' && req.dbUser.schoolId) {
+        const { default: Course } = await import('../models/Course.js')
+        const deptCourses = await Course.find({ schoolId: req.dbUser.schoolId }).select('_id').lean()
+        filter = { courseId: { $in: deptCourses.map(c => c._id) } }
+      }
+
+      assignments = await Assignment.find(filter)
         .sort({ dueDate: 1 })
         .populate('courseId', 'code title')
         .lean()
