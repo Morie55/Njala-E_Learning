@@ -127,22 +127,22 @@ router.patch('/me/select-role', requireAuth, populateUser, async (req, res, next
     const user = await User.findById(req.dbUser._id)
     if (!user) return res.status(404).json({ error: 'User not found' })
 
-    // IMPORTANT: Only store in requestedRole — never write role from user input.
-    // The real role field is only set by admin approve action.
-    user.requestedRole = role
-    user.roleSelected = true
-    user.status = 'PENDING'
-    await user.save()
+    const selectPayload = {
+      requestedRole: role,
+      roleSelected: true,
+      status: 'PENDING',
+    }
+    const updatedUser = await User.findByIdAndUpdate(req.dbUser._id, { $set: selectPayload }, { returnDocument: 'after' })
 
     await logAudit({
       req,
       action: 'ROLE_SELECTED',
       targetModel: 'User',
-      targetId: user._id.toString(),
-      details: { requestedRole: role, email: user.email },
+      targetId: updatedUser._id.toString(),
+      details: { requestedRole: role, email: updatedUser.email },
     })
 
-    res.json(user)
+    res.json(updatedUser)
   } catch (err) { next(err) }
 })
 
@@ -210,18 +210,20 @@ router.patch('/:id/approve', requireAuth, populateUser, async (req, res, next) =
       ? role
       : (user.requestedRole || user.role || 'student')
 
-    user.role = assignedRole
-    user.status = 'ACTIVE'
-    user.activatedAt = new Date()
-    user.approvedBy = req.dbUser._id
-    user.approvedAt = new Date()
-    await user.save()
+    const updatePayload = {
+      role: assignedRole,
+      status: 'ACTIVE',
+      activatedAt: new Date(),
+      approvedBy: req.dbUser._id,
+      approvedAt: new Date(),
+    }
+    const updatedUser = await User.findByIdAndUpdate(req.params.id, { $set: updatePayload }, { returnDocument: 'after' })
 
-    if (user.clerkId && process.env.CLERK_SECRET_KEY) {
+    if (updatedUser.clerkId && process.env.CLERK_SECRET_KEY) {
       try {
         const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
-        await clerk.users.updateUser(user.clerkId, {
-          publicMetadata: { role: user.role },
+        await clerk.users.updateUser(updatedUser.clerkId, {
+          publicMetadata: { role: updatedUser.role },
         })
       } catch (clerkErr) {
         console.warn('[CLERK ROLE SYNC WARN]', clerkErr.message)
@@ -232,11 +234,11 @@ router.patch('/:id/approve', requireAuth, populateUser, async (req, res, next) =
       req,
       action: 'ACCOUNT_APPROVED',
       targetModel: 'User',
-      targetId: user._id.toString(),
-      details: { assignedRole: user.role, email: user.email, approvedBy: req.dbUser.email },
+      targetId: updatedUser._id.toString(),
+      details: { assignedRole: updatedUser.role, email: updatedUser.email, approvedBy: req.dbUser.email },
     })
 
-    res.json(user)
+    res.json(updatedUser)
   } catch (err) { next(err) }
 })
 
@@ -250,21 +252,23 @@ router.patch('/:id/reject', requireAuth, populateUser, async (req, res, next) =>
     const user = await User.findById(req.params.id)
     if (!user) return res.status(404).json({ error: 'User not found' })
 
-    user.status = 'REJECTED'
-    user.rejectedBy = req.dbUser._id
-    user.rejectedAt = new Date()
-    user.rejectionReason = reason || ''
-    await user.save()
+    const rejectPayload = {
+      status: 'REJECTED',
+      rejectedBy: req.dbUser._id,
+      rejectedAt: new Date(),
+      rejectionReason: reason || '',
+    }
+    const rejectedUser = await User.findByIdAndUpdate(req.params.id, { $set: rejectPayload }, { returnDocument: 'after' })
 
     await logAudit({
       req,
       action: 'USER_REJECTED',
       targetModel: 'User',
-      targetId: user._id.toString(),
-      details: { reason: reason || '', email: user.email, rejectedBy: req.dbUser.email },
+      targetId: rejectedUser._id.toString(),
+      details: { reason: reason || '', email: rejectedUser.email, rejectedBy: req.dbUser.email },
     })
 
-    res.json(user)
+    res.json(rejectedUser)
   } catch (err) { next(err) }
 })
 
@@ -414,12 +418,23 @@ router.delete('/:id', requireAuth, populateUser, async (req, res, next) => {
         targetId: user._id.toString(),
         details: { reason, email: user.email },
       })
+      // Delete from MongoDB first
       await User.findByIdAndDelete(user._id)
+      // Best-effort Clerk account deletion — do not fail the request if Clerk is unavailable
+      if (user.clerkId && process.env.CLERK_SECRET_KEY) {
+        try {
+          const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
+          await clerk.users.deleteUser(user.clerkId)
+        } catch (clerkErr) {
+          console.warn('[HARD DELETE] Clerk deletion failed (MongoDB already deleted):', clerkErr.message)
+        }
+      }
       return res.json({ message: 'User permanently deleted.' })
     }
 
-    user.deletedAt = new Date()
-    await user.save()
+    // Use findByIdAndUpdate to bypass schema validation on legacy docs
+    // (avoids ValidationError if requestedRole field has a stale 'admin' value)
+    await User.findByIdAndUpdate(user._id, { $set: { deletedAt: new Date() } })
 
     await logAudit({
       req,

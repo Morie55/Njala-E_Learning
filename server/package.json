@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "node --watch src/index.js",
+    "dev": "nodemon",
     "start": "node src/index.js",
     "test": "vitest run",
     "purge:users": "node --env-file=.env src/scripts/purgeAllUsers.js"
@@ -33,6 +33,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "nodemon": "^3.1.14",
     "supertest": "^7.2.2",
     "vitest": "^4.1.10"
   }

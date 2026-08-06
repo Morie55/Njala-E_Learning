@@ -181,12 +181,15 @@ export default function UserManagement() {
 
     setSaving(true)
     try {
-      const url = hardDelete ? `/users/${selected._id}?hard=true` : `/users/${selected._id}`
-      await api.delete(url, hardDelete ? { data: { reason: deleteReason } } : undefined)
+      let url = hardDelete ? `/users/${selected._id}?hard=true` : `/users/${selected._id}`
+      if (hardDelete && deleteReason.trim()) {
+        url += `&reason=${encodeURIComponent(deleteReason.trim())}`
+      }
+      await api.delete(url)
       setModal(null)
       loadData()
     } catch (err) {
-      alert(err.response?.data?.error ?? 'Failed to delete user.')
+      alert(err.message || 'Failed to delete user.')
     }
     setSaving(false)
   }
