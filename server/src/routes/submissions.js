@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import mongoose from 'mongoose'
 import { requireAuth } from '../middleware/auth.js'
 import { populateUser } from '../middleware/populateUser.js'
 import { enforceStatus } from '../middleware/enforceStatus.js'
@@ -14,12 +15,19 @@ import { sendMail, templates } from '../utils/mailer.js'
 const router = Router()
 const auth = [requireAuth, populateUser, enforceStatus]
 
+function getTargetStudentId(req) {
+  const q = req.query.studentId
+  const isValid = q && q !== 'undefined' && q !== 'null' && mongoose.Types.ObjectId.isValid(q)
+  if (['admin', 'dept_head', 'lecturer'].includes(req.dbUser.role) && isValid) {
+    return q
+  }
+  return req.dbUser._id
+}
+
 /** GET /api/v1/submissions/me  */
 router.get('/me', ...auth, async (req, res, next) => {
   try {
-    const targetStudentId = (['admin', 'dept_head', 'lecturer'].includes(req.dbUser.role) && req.query.studentId)
-      ? req.query.studentId
-      : req.dbUser._id
+    const targetStudentId = getTargetStudentId(req)
 
     const subs = await Submission.find({ studentId: targetStudentId })
       .populate({ path: 'assignmentId', select: 'title maxScore courseId dueDate', populate: { path: 'courseId', select: 'code title semester' } })
@@ -41,9 +49,7 @@ router.get('/me', ...auth, async (req, res, next) => {
 /** GET /api/v1/submissions/transcript */
 router.get('/transcript', ...auth, async (req, res, next) => {
   try {
-    const targetStudentId = (['admin', 'dept_head', 'lecturer'].includes(req.dbUser.role) && req.query.studentId)
-      ? req.query.studentId
-      : req.dbUser._id
+    const targetStudentId = getTargetStudentId(req)
 
     const student = await User.findById(targetStudentId)
       .populate('schoolId', 'name code')

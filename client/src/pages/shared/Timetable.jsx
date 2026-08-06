@@ -2,6 +2,7 @@ import { useState, useEffect, Fragment } from 'react'
 import { useUser } from '../../hooks/useUser'
 import AppLayout from '../../components/layout/AppLayout'
 import api from '../../lib/api'
+import { exportTimetablePDF } from '../../utils/exportTimetablePDF'
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -90,11 +91,22 @@ export default function Timetable() {
           <h1 className="text-[22px] font-black text-[#1b1c1c]">Weekly Timetable</h1>
           <p className="text-[13px] text-[#747780]">{role === 'student' ? 'Your class schedule for this semester' : 'Manage class schedules'}</p>
         </div>
-        {['lecturer', 'admin', 'dept_head'].includes(role) && (
-          <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-[#03224d] text-white px-4 py-2 rounded-xl text-[13px] font-bold hover:bg-[#1f3864] transition-colors">
-            <span className="material-symbols-outlined text-[18px]">add</span> Add Slot
-          </button>
-        )}
+        <div className="flex items-center gap-2.5">
+          {slots.length > 0 && (
+            <button
+              onClick={() => exportTimetablePDF(slots, dbUser)}
+              className="flex items-center gap-2 bg-[#086b53] text-white px-4 py-2 rounded-xl text-[13px] font-bold hover:bg-[#06523f] transition-all shadow-xs cursor-pointer active:scale-95"
+              title="Download Timetable PDF"
+            >
+              <span className="material-symbols-outlined text-[18px]">download</span> Download PDF
+            </button>
+          )}
+          {['lecturer', 'admin', 'dept_head'].includes(role) && (
+            <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-[#03224d] text-white px-4 py-2 rounded-xl text-[13px] font-bold hover:bg-[#1f3864] transition-colors cursor-pointer">
+              <span className="material-symbols-outlined text-[18px]">add</span> Add Slot
+            </button>
+          )}
+        </div>
       </div>
 
       {loading ? (

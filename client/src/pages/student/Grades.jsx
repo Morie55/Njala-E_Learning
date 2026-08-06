@@ -35,18 +35,23 @@ export default function Grades() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    const studentQuery = studentId ? `?studentId=${studentId}` : ''
-    const coursesQuery = studentId ? '/courses' : '/courses?enrolled=true'
+    const validStudentId = studentId && studentId !== 'undefined' && studentId !== 'null' && studentId.length === 24 ? studentId : null
+    const studentQuery = validStudentId ? `?studentId=${validStudentId}` : ''
+    const coursesQuery = validStudentId ? '/courses' : '/courses?enrolled=true'
 
-    Promise.all([
+    Promise.allSettled([
       api.get(`/submissions/me${studentQuery}`),
       api.get(coursesQuery),
       api.get(`/submissions/transcript${studentQuery}`),
     ])
-      .then(([s, c, t]) => {
-        setSubmissions(s.data?.submissions ?? [])
-        setCourses(c.data?.courses ?? [])
-        setTranscriptData(t.data ?? null)
+      .then(([sRes, cRes, tRes]) => {
+        if (sRes.status === 'fulfilled') setSubmissions(sRes.value.data?.submissions ?? [])
+        if (cRes.status === 'fulfilled') setCourses(cRes.value.data?.courses ?? [])
+        if (tRes.status === 'fulfilled') setTranscriptData(tRes.value.data ?? null)
+
+        if (sRes.status === 'rejected' && cRes.status === 'rejected' && tRes.status === 'rejected') {
+          setError('Failed to load academic records.')
+        }
       })
       .catch((err) => {
         console.error('Failed to load grades data:', err)
