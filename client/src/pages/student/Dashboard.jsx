@@ -232,18 +232,54 @@ export default function StudentDashboard() {
               <p className="text-[14px] text-[#44474f] text-center py-6">No announcements yet.</p>
             ) : (
               <div className="space-y-4">
-                {announcements.map((a) => (
-                  <div key={a._id} className="border-b border-[#c4c6d0] pb-4 last:border-0 last:pb-0">
-                    <div className="flex justify-between items-start mb-1">
-                      <span className="text-[11px] sm:text-[12px] text-[#44474f] shrink-0">
-                        {a.createdAt
-                          ? `${Math.floor((Date.now() - new Date(a.createdAt)) / 3600000)}h ago`
-                          : 'Recent'}
-                      </span>
+                {announcements.map((a) => {
+                  const CATEGORY_META = {
+                    timetable:     { icon: 'calendar_month', color: 'bg-[#ffdcbb] text-[#543100]', label: 'Timetable' },
+                    lecture_notes: { icon: 'description',    color: 'bg-[#a0f3d4] text-[#00513e]', label: 'Lecture Notes' },
+                    exam_schedule: { icon: 'event',          color: 'bg-[#d8e2ff] text-[#1f3864]', label: 'Exam Notice' },
+                    urgent:        { icon: 'warning',        color: 'bg-[#ffdad6] text-[#93000a]', label: 'Urgent Alert' },
+                    general:       { icon: 'campaign',       color: 'bg-[#d8e2ff] text-[#001a41]', label: 'General' },
+                  }
+                  const cat = CATEGORY_META[a.category] || CATEGORY_META.general
+                  return (
+                    <div key={a._id} className="border-b border-[#c4c6d0] pb-4 last:border-0 last:pb-0 space-y-1.5">
+                      {/* Category badge + timestamp */}
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${cat.color}`}>
+                          <span className="material-symbols-outlined text-[12px]">{cat.icon}</span>
+                          {cat.label}
+                        </span>
+                        <span className="text-[11px] text-[#747780] shrink-0">
+                          {a.createdAt
+                            ? `${Math.floor((Date.now() - new Date(a.createdAt)) / 3600000)}h ago`
+                            : 'Recent'}
+                        </span>
+                      </div>
+                      {/* Title */}
+                      {a.title && (
+                        <h4 className="text-[13px] sm:text-[14px] font-bold text-[#03224d] leading-snug">{a.title}</h4>
+                      )}
+                      {/* Message body */}
+                      <p className="text-[12px] sm:text-[13px] text-[#44474f] line-clamp-3">{a.message}</p>
+                      {/* File attachment link */}
+                      {a.fileUrl && (
+                        <a
+                          href={a.fileUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#086b53] hover:underline"
+                        >
+                          <span className="material-symbols-outlined text-[13px]">attachment</span>
+                          View Attached File / Material
+                        </a>
+                      )}
+                      {/* Poster name */}
+                      {a.postedByName && (
+                        <p className="text-[10px] text-[#747780]">Posted by {a.postedByName}</p>
+                      )}
                     </div>
-                    <p className="text-[13px] sm:text-[14px] text-[#44474f] line-clamp-3">{a.message}</p>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </section>

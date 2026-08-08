@@ -1,9 +1,12 @@
 import { useState } from 'react'
+import { useUser } from '../../hooks/useUser'
 import { Link, useLocation } from 'react-router-dom'
 import { useClerk } from '@clerk/clerk-react'
 import clsx from 'clsx'
 import njalaLogo from '../../assets/Njala University.jpg'
 import Modal from '../ui/Modal'
+
+const ALUMNI_LINK = { icon: 'workspace_premium', label: 'Alumni Portal', path: '/alumni/dashboard' }
 
 const NAV = {
   student: [
@@ -17,7 +20,6 @@ const NAV = {
     { icon: 'event_available', label: 'Attendance', path: '/attendance' },
     { icon: 'bar_chart', label: 'My Progress', path: '/progress' },
     { icon: 'payments', label: 'Fee Payments', path: '/payments' },
-    { icon: 'workspace_premium', label: 'Alumni Portal', path: '/alumni/dashboard' },
     { icon: 'person', label: 'Profile', path: '/profile' },
   ],
   lecturer: [
@@ -79,9 +81,16 @@ const ROLE_LABELS = {
 export default function Sidebar({ role, mobileOpen, onClose }) {
   const location = useLocation()
   const { signOut } = useClerk()
+  const { status } = useUser()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
-  const items = NAV[role] ?? []
+
+  const isAlumni = status === 'ALUMNI'
+  const baseItems = NAV[role] ?? []
+  // Only show Alumni Portal link to students whose account status is ALUMNI
+  const items = role === 'student' && isAlumni
+    ? [...baseItems, ALUMNI_LINK]
+    : baseItems
 
   const handleConfirmLogout = async () => {
     try {

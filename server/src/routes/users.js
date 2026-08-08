@@ -217,6 +217,12 @@ router.patch('/:id/approve', requireAuth, populateUser, async (req, res, next) =
       approvedBy: req.dbUser._id,
       approvedAt: new Date(),
     }
+
+    // Auto-generate student ID if not already assigned
+    if (assignedRole === 'student' && !user.idNumber && user.departmentId) {
+      updatePayload.idNumber = await generateStudentId(user.departmentId)
+    }
+
     const updatedUser = await User.findByIdAndUpdate(req.params.id, { $set: updatePayload }, { returnDocument: 'after' })
 
     if (updatedUser.clerkId && process.env.CLERK_SECRET_KEY) {
@@ -328,6 +334,10 @@ router.patch('/:id/status', requireAuth, populateUser, async (req, res, next) =>
       update.approvedAt = new Date()
       update.suspendedAt = null
       update.suspensionReason = ''
+      // Auto-generate student ID on status approval if missing
+      if (update.role === 'student' && !existingUser.idNumber && existingUser.departmentId) {
+        update.idNumber = await generateStudentId(existingUser.departmentId)
+      }
     }
     if (upperStatus === 'REJECTED') {
       update.rejectedBy = req.dbUser._id

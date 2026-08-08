@@ -141,11 +141,16 @@ export default function UserManagement() {
       if (newStatus !== selected.status) {
         await api.patch(`/users/${selected._id}/status`, { status: newStatus })
       }
-      await api.patch(`/users/${selected._id}/assignment`, {
+      const assignmentPayload = {
         schoolId: assignedSchool,
         departmentId: assignedDept,
-        idNumber: newIdNumber,
-      })
+      }
+      // Only send idNumber when admin explicitly typed one — omitting it
+      // lets the server auto-generate an ID for students with no ID yet.
+      if (newIdNumber.trim()) {
+        assignmentPayload.idNumber = newIdNumber.trim()
+      }
+      await api.patch(`/users/${selected._id}/assignment`, assignmentPayload)
       setModal(null)
       loadData()
     } catch (err) {

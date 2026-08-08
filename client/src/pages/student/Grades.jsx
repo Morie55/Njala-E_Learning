@@ -32,7 +32,6 @@ export default function Grades() {
   const [courses, setCourses] = useState([])
   const [transcriptData, setTranscriptData] = useState(null)
   const [downloading, setDownloading] = useState(false)
-  const [error, setError] = useState('')
   const [accountPending, setAccountPending] = useState(false)
 
   useEffect(() => {
@@ -40,9 +39,15 @@ export default function Grades() {
     const studentQuery = validStudentId ? `?studentId=${validStudentId}` : ''
     const coursesQuery = validStudentId ? '/courses' : '/courses?enrolled=true'
 
-    const isPendingError = (err) => {
+    const isLifecycleError = (err) => {
       const msg = err?.message || ''
-      return msg.includes('ACCOUNT_PENDING_APPROVAL') || msg.includes('awaiting administrator approval') || msg.includes('PENDING')
+      return (
+        msg.includes('ACCOUNT_PENDING_APPROVAL') ||
+        msg.includes('awaiting administrator approval') ||
+        msg.includes('PENDING') ||
+        msg.includes('ACCOUNT_REJECTED') ||
+        msg.includes('rejected')
+      )
     }
 
     Promise.allSettled([
@@ -55,26 +60,19 @@ export default function Grades() {
         if (cRes.status === 'fulfilled') setCourses(cRes.value.data?.courses ?? [])
         if (tRes.status === 'fulfilled') setTranscriptData(tRes.value.data ?? null)
 
-        if (sRes.status === 'rejected' && cRes.status === 'rejected' && tRes.status === 'rejected') {
-          // Check if the failure is because the account is pending admin approval
-          const allPending = [sRes.reason, cRes.reason, tRes.reason].some(isPendingError)
-          if (allPending) {
-            setAccountPending(true)
-          } else {
-            setError('Failed to load academic records. Please try again or contact support.')
-          }
-        }
-      })
-      .catch((err) => {
-        console.error('Failed to load grades data:', err)
-        if (isPendingError(err)) {
+        // Show PENDING banner if any request returned a lifecycle-blocked error
+        const reasons = [sRes, cRes, tRes]
+          .filter(r => r.status === 'rejected')
+          .map(r => r.reason)
+
+        if (reasons.length > 0 && reasons.some(isLifecycleError)) {
           setAccountPending(true)
-        } else {
-          setError('Failed to load academic records. Please try again or contact support.')
         }
+        // No generic error shown — empty state (0 submissions/courses) is the correct fallback
       })
       .finally(() => setLoading(false))
   }, [studentId])
+
 
   const filtered = selectedCourse
     ? submissions.filter((s) => s.courseId === selectedCourse)
@@ -180,12 +178,7 @@ export default function Grades() {
         </div>
       </div>
 
-      {error && (
-        <div className="mb-6 p-3.5 bg-[#ffdad6] border border-[#ba1a1a] text-[#ba1a1a] rounded-lg text-sm flex items-center gap-2">
-          <span className="material-symbols-outlined text-[18px]">error</span>
-          <span>{error}</span>
-        </div>
-      )}
+
 
       {/* Stats row */}
       <div className="grid grid-cols-12 gap-4 sm:gap-6 mb-6">
